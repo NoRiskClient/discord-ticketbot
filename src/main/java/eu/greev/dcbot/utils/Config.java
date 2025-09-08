@@ -9,6 +9,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Getter
@@ -23,6 +24,7 @@ public class Config {
     private String color;
     private String token;
     private List<Long> addToTicketThread;
+    private Map<Long, String> claimEmojis;
 
 
     public void dumpConfig(String path) {

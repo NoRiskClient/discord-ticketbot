@@ -25,7 +25,6 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
-import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
@@ -54,8 +53,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
-    @Getter private static String createCommandId;
-    @Getter private static String getTicketCommandId;
+    @Getter
+    private static String createCommandId;
+    @Getter
+    private static String getTicketCommandId;
     private static Jdbi jdbi;
 
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -100,9 +101,9 @@ public class Main {
 
         jda.updateCommands().addCommands(Commands.slash("ticket", "Manage the ticket system")
                 .addSubcommands(new SubcommandData("add", "Add a User to this ticket")
-                        .addOption(OptionType.USER,"member", "The user adding to the current ticket", true))
+                        .addOption(OptionType.USER, "member", "The user adding to the current ticket", true))
                 .addSubcommands(new SubcommandData("remove", "Remove a User from this ticket")
-                        .addOption(OptionType.USER,"member", "The user removing from the current ticket", true))
+                        .addOption(OptionType.USER, "member", "The user removing from the current ticket", true))
                 .addSubcommands(new SubcommandData("create", "Create a new Ticket for you")
                         .addOption(OptionType.STRING, "topic", "The topic of the ticket", false))
                 .addSubcommands(new SubcommandData("close", "Close this ticket"))
@@ -119,17 +120,19 @@ public class Main {
                 .addSubcommands(new SubcommandData("get-tickets", "Get all ticket ids by member")
                         .addOption(OptionType.USER, "member", "The owner of the tickets", true))
                 .addSubcommands(new SubcommandData("setup", "Setup the System")
-                        .addOption(OptionType.CHANNEL, "base-channel","The channel where the ticket select menu should be", true)
-                        .addOption(OptionType.CHANNEL, "support-category","The category where the tickets should create", true)
-                        .addOption(OptionType.ROLE, "staff","The role which is the team role", true)
+                        .addOption(OptionType.CHANNEL, "base-channel", "The channel where the ticket select menu should be", true)
+                        .addOption(OptionType.CHANNEL, "support-category", "The category where the tickets should create", true)
+                        .addOption(OptionType.ROLE, "staff", "The role which is the team role", true)
                         .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false))
+                .addSubcommands(new SubcommandData("set-claim-emoji", "Set your personal claim emoji")
+                        .addOption(OptionType.STRING, "emoji", "The emoji you want to set", true))
                 .addSubcommandGroups(new SubcommandGroupData("thread", "Manages the ticket thread")
                         .addSubcommands(new SubcommandData("add", "Add a staff member to the ticket thread")
                                 .addOption(OptionType.USER, "staff", "Staff member to add", true))
                         .addSubcommands(new SubcommandData("join", "Join the ticket thread")))
-                ).queue(s -> s.get(0).getSubcommands().forEach(c ->  {
+        ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
-                            getTicketCommandId = c.getId();
+                        getTicketCommandId = c.getId();
                     } else if (c.getName().equals("create")) {
                         createCommandId = c.getId();
                     }
@@ -174,6 +177,8 @@ public class Main {
 
         registerInteraction("tickets-forwards", new TicketsForward(ticketService));
         registerInteraction("tickets-backwards", new TicketsBackwards(ticketService));
+
+        registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
 
         log.info("Started: " + OffsetDateTime.now(ZoneId.systemDefault()));
     }

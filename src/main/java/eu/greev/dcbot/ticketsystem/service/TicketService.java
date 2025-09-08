@@ -71,7 +71,7 @@ public class TicketService {
                 .info(info)
                 .build();
 
-        TextChannel ticketChannel = guild.createTextChannel(generateChannelName(topic, ticketData.getLastTicketId() + 1), jda.getCategoryById(config.getSupportCategory()))
+        TextChannel ticketChannel = guild.createTextChannel(generateChannelName(ticket), jda.getCategoryById(config.getSupportCategory()))
                 .addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY))
                 .addRolePermissionOverride(config.getStaffId(), List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null)
                 .addMemberPermissionOverride(owner.getIdLong(), List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null)
@@ -181,7 +181,7 @@ public class TicketService {
 
         ticket.setSupporter(supporter);
         updateChannelTopic(ticket);
-        ticket.getTextChannel().getManager().setName("✓-" + generateChannelName(ticket.getTopic(), ticket.getId())).queue();
+        ticket.getTextChannel().getManager().setName(generateChannelName(ticket)).queue();
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.decode(config.getColor()))
                 .setDescription("Hello there, " + ticket.getOwner().getAsMention() + "! " + """
                            A member of staff will assist you shortly.
@@ -205,17 +205,8 @@ public class TicketService {
 
     public void toggleWaiting(Ticket ticket, boolean waiting) {
         TextChannelManager manager = ticket.getTextChannel().getManager();
-        String channelName = generateChannelName(ticket.getTopic(), ticket.getId());
         ticket.setWaiting(waiting);
-        if (waiting) {
-            manager.setName(WAITING_EMOTE + "-" + channelName).queue();
-        } else {
-            if (ticket.getSupporter() == null) {
-                manager.setName(channelName).queue();
-                return;
-            }
-            manager.setName("✓-" + channelName).queue();
-        }
+        manager.setName(generateChannelName(ticket)).queue();
     }
 
     public boolean addUser(Ticket ticket, User user) {
@@ -341,18 +332,30 @@ public class TicketService {
         changes.clear();
     }
 
-    private String generateChannelName(String topic, int ticketId) {
-        String name;
+    private String generateChannelName(Ticket ticket) {
+        String topic = ticket.getTopic();
+        int ticketId = ticket.getId();
+
+        String name = "";
+
+        if (ticket.isWaiting()) {
+            name += WAITING_EMOTE + "-";
+        }
+
+        if (ticket.getSupporter() != null) {
+            name += config.getClaimEmojis().getOrDefault(ticket.getSupporter().getIdLong(), "✓") + "-";
+        }
+
         if (topic.equals("Bugreport")) {
-            name = "bugreport-" + ticketId;
+            name += "bugreport-" + ticketId;
         } else if (topic.equals("Complain")) {
-            name = "complain-" + ticketId;
+            name += "complain-" + ticketId;
         }  else if (topic.contains(" wants pardon ")) {
-            name = "pardon-" + ticketId;
+            name += "pardon-" + ticketId;
         } else if (topic.contains(" apply ")) {
-            name = "application-" + ticketId;
+            name += "application-" + ticketId;
         } else {
-            name = "ticket-" + ticketId;
+            name += "ticket-" + ticketId;
         }
         return name;
     }
