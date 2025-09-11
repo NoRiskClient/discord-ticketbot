@@ -16,7 +16,7 @@ import java.awt.*;
 
 @AllArgsConstructor
 @Slf4j
-public class TicketClose implements Interaction{
+public class TicketClose implements Interaction {
     private final JDA jda;
     private final Config config;
     private final EmbedBuilder wrongChannel;

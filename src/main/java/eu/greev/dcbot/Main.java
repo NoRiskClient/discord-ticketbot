@@ -1,19 +1,10 @@
 package eu.greev.dcbot;
 
 import eu.greev.dcbot.ticketsystem.TicketListener;
-import eu.greev.dcbot.ticketsystem.interactions.Interaction;
-import eu.greev.dcbot.ticketsystem.interactions.TicketClaim;
-import eu.greev.dcbot.ticketsystem.interactions.TicketClose;
+import eu.greev.dcbot.ticketsystem.categories.*;
+import eu.greev.dcbot.ticketsystem.interactions.*;
 import eu.greev.dcbot.ticketsystem.interactions.buttons.*;
 import eu.greev.dcbot.ticketsystem.interactions.commands.*;
-import eu.greev.dcbot.ticketsystem.interactions.modals.Application;
-import eu.greev.dcbot.ticketsystem.interactions.modals.Bug;
-import eu.greev.dcbot.ticketsystem.interactions.modals.Custom;
-import eu.greev.dcbot.ticketsystem.interactions.modals.Pardon;
-import eu.greev.dcbot.ticketsystem.interactions.selections.TicketApplication;
-import eu.greev.dcbot.ticketsystem.interactions.selections.TicketBug;
-import eu.greev.dcbot.ticketsystem.interactions.selections.TicketCustom;
-import eu.greev.dcbot.ticketsystem.interactions.selections.TicketPardon;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
@@ -44,15 +35,14 @@ import java.awt.*;
 import java.io.*;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
+    public static final List<ICategory> CATEGORIES = new ArrayList<>();
     @Getter
     private static String createCommandId;
     @Getter
@@ -152,25 +142,14 @@ public class Main {
         registerInteraction("setup", new Setup(config, ticketService, missingPerm, jda));
         registerInteraction("info", new LoadTicket(config, ticketService, missingPerm, jda));
         registerInteraction("get-tickets", new GetTickets(config, ticketService, missingPerm, jda));
-        registerInteraction("create", new Create(config, ticketService, ticketData, missingPerm, jda));
         registerInteraction("add", new AddMember(config, jda, ticketService, wrongChannel, missingPerm));
         registerInteraction("remove", new RemoveMember(config, ticketService, missingPerm, wrongChannel, jda));
         registerInteraction("transfer", new Transfer(config, ticketService, missingPerm, wrongChannel, jda));
         registerInteraction("set-owner", new SetOwner(config, ticketService, missingPerm, wrongChannel, jda));
         registerInteraction("set-waiting", new SetWaiting(config, ticketService, missingPerm, wrongChannel, jda));
-        registerInteraction("set-topic", new SetTopic(config, ticketService, missingPerm, wrongChannel, jda));
 
         registerInteraction("nevermind", new TicketNevermind(ticketService, config));
-        registerInteraction("application", new Application(ticketService, ticketData, config));
-        registerInteraction("custom", new Custom(ticketService, ticketData, config));
-        registerInteraction("pardon", new Pardon(ticketService, ticketData, config));
-        registerInteraction("bug", new Bug(ticketService, ticketData, config));
         registerInteraction("transcript", new GetTranscript(config, ticketService));
-
-        registerInteraction("select-application", new TicketApplication());
-        registerInteraction("select-custom", new TicketCustom());
-        registerInteraction("select-pardon", new TicketPardon());
-        registerInteraction("select-bug", new TicketBug());
 
         registerInteraction("thread add", new ThreadAdd(config, ticketService, wrongChannel, missingPerm, jda));
         registerInteraction("thread join", new ThreadJoin(config, ticketService, wrongChannel, missingPerm, jda));
@@ -180,7 +159,13 @@ public class Main {
 
         registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
 
-        log.info("Started: " + OffsetDateTime.now(ZoneId.systemDefault()));
+        registerCategory(new General(), config, ticketService, ticketData);
+        registerCategory(new Report(), config, ticketService, ticketData);
+        registerCategory(new Creator(), config, ticketService, ticketData);
+        registerCategory(new Bug(), config, ticketService, ticketData);
+        registerCategory(new Payment(), config, ticketService, ticketData);
+
+        log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
     }
 
     private static void initDatasource() {
@@ -200,5 +185,11 @@ public class Main {
 
     private static void registerInteraction(String identifier, Interaction interaction) {
         INTERACTIONS.put(identifier, interaction);
+    }
+
+    private static void registerCategory(ICategory category, Config config, TicketService ticketService, TicketData ticketData) {
+        registerInteraction("select-" + category.getId(), new CategorySelection(category));
+        registerInteraction(category.getId(), new TicketModal(category, config, ticketService, ticketData));
+        CATEGORIES.add(category);
     }
 }

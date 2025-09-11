@@ -6,11 +6,11 @@ CREATE TABLE IF NOT EXISTS tickets
 
     threadID    VARCHAR     DEFAULT ""                  NOT NULL,
 
-    topic       VARCHAR     DEFAULT "No topic given"    NOT NULL,
-
     isWaiting   BOOL        DEFAULT 0                   NOT NULL,
 
-    info        VARCHAR     DEFAULT ""                  NOT NULL,
+    category    VARCHAR     DEFAULT ""                  NOT NULL,
+
+    info        VARCHAR     DEFAULT "{}"                NOT NULL,
 
     owner       VARCHAR     DEFAULT ""                  NOT NULL,
 

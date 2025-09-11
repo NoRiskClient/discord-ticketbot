@@ -1,5 +1,6 @@
 package eu.greev.dcbot.ticketsystem.entities;
 
+import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.Transcript;
 import lombok.Builder;
@@ -9,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
-import org.apache.logging.log4j.util.Strings;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,8 +22,8 @@ public class Ticket {
     @Getter private User owner;
     @Getter private User supporter;
     @Getter private User closer;
-    @Getter @Builder.Default private String topic = "No topic given";
-    @Getter @Builder.Default private String info = Strings.EMPTY;
+    @Getter private ICategory category;
+    @Getter private Map<String, String> info;
     @Getter @Builder.Default private ArrayList<String> involved = new ArrayList<>();
     @Getter boolean isWaiting;
     @Getter @Setter String tempMsgId;
@@ -53,19 +54,13 @@ public class Ticket {
         return this;
     }
 
-    public Ticket setTopic(String topic) {
-        this.topic = topic;
-        this.save();
-        return this;
-    }
-
     public Ticket setOpen(boolean isOpen) {
         this.isOpen = isOpen;
         this.save();
         return this;
     }
 
-    public Ticket setInfo(String info) {
+    public Ticket setInfo(Map<String, String> info) {
         this.info = info;
         this.save();
         return this;

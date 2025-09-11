@@ -1,12 +1,11 @@
-package eu.greev.dcbot.ticketsystem.interactions.modals;
+package eu.greev.dcbot.ticketsystem.interactions;
 
+import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
-import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.PermissionOverride;
@@ -16,10 +15,11 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @AllArgsConstructor
-@Getter
-public abstract class AbstractModal implements Interaction {
+public class TicketModal implements Interaction {
+    private final ICategory category;
     private final Config config;
     private final TicketService ticketService;
     private final TicketData ticketData;
@@ -38,7 +38,11 @@ public abstract class AbstractModal implements Interaction {
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.RED)
                 .setFooter(config.getServerName(), config.getServerLogo());
 
-        if (ticketService.createNewTicket(escapeFormatting(getTicketInfo(event)), escapeFormatting(getTicketTopic(event)), event.getUser())) {
+        Map<String, String> info = category.getInfo(event);
+
+        info.replaceAll((k, v) -> escapeFormatting(v));
+
+        if (ticketService.createNewTicket(info, category, event.getUser())) {
             Ticket ticket = ticketService.getTicketByTicketId(ticketData.getLastTicketId());
             builder.setAuthor(event.getMember().getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
                     .setColor(Color.decode(config.getColor()))
@@ -54,12 +58,7 @@ public abstract class AbstractModal implements Interaction {
             });
             event.replyEmbeds(builder.build()).setEphemeral(true).queue();
         }
-
     }
-
-    abstract String getTicketInfo(ModalInteractionEvent event);
-
-    abstract String getTicketTopic(ModalInteractionEvent event);
 
     private String escapeFormatting(String text) {
         for (String formatString : this.discordFormattingChars) {
