@@ -152,6 +152,8 @@ public class TicketListener extends ListenerAdapter {
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         if (ticket.isWaiting()) {
             ticketService.toggleWaiting(ticket, false);
+            ticket.setWaitingSince(null);
+            ticket.setRemindersSent(0);
         }
         ticket.getTranscript().addMessage(event.getMessage(), ticket.getId());
     }

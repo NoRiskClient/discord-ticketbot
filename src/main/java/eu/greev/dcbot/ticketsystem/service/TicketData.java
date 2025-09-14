@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.JDA;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,8 @@ public class TicketData {
                                 .info(mapper.readValue(resultSet.getString("info"), new TypeReference<>() {}))
                                 .isOpen(resultSet.getBoolean("isOpen"))
                                 .isWaiting(resultSet.getBoolean("isWaiting"))
+                                .remindersSent(resultSet.getInt("remindersSent"))
+                                .waitingSince(resultSet.getTimestamp("waitingSince") != null ? resultSet.getTimestamp("waitingSince").toLocalDateTime() : null)
                                 .baseMessage(resultSet.getString("baseMessage"))
                                 .involved(new ArrayList<>(List.of(resultSet.getString("involved").split(", "))));
                     } catch (JsonProcessingException e) {
@@ -85,6 +88,12 @@ public class TicketData {
                 .list());
     }
 
+    public List<Integer> getOpenWaitingTicketsIds() {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT ticketID FROM tickets WHERE isOpen=true AND isWaiting=true")
+                .mapTo(Integer.class)
+                .list());
+    }
+
     public Integer getOpenTicketOfUser(String user) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT ticketID FROM tickets WHERE owner=? AND isOpen=true")
                 .bind(0, user)
@@ -110,7 +119,7 @@ public class TicketData {
     public void saveTicket(Ticket ticket) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            jdbi.withHandle(handle -> handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=? WHERE ticketID =?")
+            jdbi.withHandle(handle -> handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=? WHERE ticketID =?")
                     .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                     .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
                     .bind(2, ticket.getCategory().getId())
@@ -122,7 +131,9 @@ public class TicketData {
                             "" : ticket.getInvolved().toString().replace("[", "").replace("]", ""))
                     .bind(8, ticket.getBaseMessage())
                     .bind(9, ticket.isOpen())
-                    .bind(10, ticket.getId())
+                    .bind(10, ticket.getWaitingSince() == null ? null : Timestamp.valueOf(ticket.getWaitingSince()))
+                    .bind(11, ticket.getRemindersSent())
+                    .bind(12, ticket.getId())
                     .execute());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
