@@ -33,7 +33,13 @@ public class Report implements ICategory {
                 .build();
 
         TextInput reason = TextInput.create("reason", "Reason", TextInputStyle.PARAGRAPH)
-                .setPlaceholder("Why do you want to report this user? Also include any relevant evidence.")
+                .setPlaceholder("Why do you want to report this user?")
+                .setRequired(true)
+                .setMaxLength(1000)
+                .build();
+
+        TextInput evidence = TextInput.create("evidence", "Evidence", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("Provide any evidence (links, screenshots, etc.) to support your report.")
                 .setRequired(true)
                 .setMaxLength(1000)
                 .build();
@@ -41,6 +47,7 @@ public class Report implements ICategory {
         return Modal.create(getId(), getModalTitle())
                 .addActionRow(user)
                 .addActionRow(reason)
+                .addActionRow(evidence)
                 .build();
     }
 
@@ -50,6 +57,7 @@ public class Report implements ICategory {
 
         map.put("User", event.getValue("user").getAsString());
         map.put("Reason", event.getValue("reason").getAsString());
+        map.put("Evidence", event.getValue("evidence").getAsString());
 
         return map;
     }
