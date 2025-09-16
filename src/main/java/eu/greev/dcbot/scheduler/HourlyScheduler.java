@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Member;
 
 import java.awt.*;
 import java.time.Duration;
@@ -67,19 +66,22 @@ public class HourlyScheduler {
                 EmbedBuilder builder = new EmbedBuilder()
                         .setTitle(String.format("⏰ Reminder: Waiting for your response (%s/%s)", ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
                         .setColor(Color.decode(config.getColor()))
-                        .appendDescription(String.format("**Our support team is waiting for an answer in <#%s>**", ticket.getTextChannel().getId()))
+                        .appendDescription("**Our support team is waiting for you to respond**")
                         .appendDescription(String.format("\nIf you do not respond, the ticket will be automatically closed <t:%d:R>.", ticket.getWaitingSince().plusHours(AUTO_CLOSE_HOURS + 1).withMinute(0).toEpochSecond(ZonedDateTime.now().getOffset())))
                         .setFooter(config.getServerName(), config.getServerLogo());
 
+                ticket.getTextChannel()
+                        .sendMessage(ticket.getOwner().getAsMention())
+                        .setEmbeds(builder.build())
+                        .queue();
 
-                Member member = jda.getGuildById(config.getServerId()).getMember(ticket.getOwner());
-                if (member != null) {
-                    member.getUser().openPrivateChannel()
-                            .flatMap(channel -> channel.sendMessageEmbeds(builder.build()))
-                            .queue();
+                ticket.setRemindersSent(ticket.getRemindersSent() + 1);
+            }
 
-                    ticket.setRemindersSent(ticket.getRemindersSent() + 1);
-                }
+            try {
+                TimeUnit.SECONDS.sleep(10L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
     }
