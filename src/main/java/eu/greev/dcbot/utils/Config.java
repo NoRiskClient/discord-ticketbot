@@ -17,7 +17,7 @@ import java.util.Map;
 public class Config {
     private long serverId;
     private long staffId;
-    private long supportCategory;
+    private long unclaimedCategory;
     private long baseChannel;
     private String serverLogo;
     private String serverName;
@@ -26,6 +26,7 @@ public class Config {
     private int maxTicketsPerUser = 3;
     private List<Long> addToTicketThread;
     private Map<Long, String> claimEmojis;
+    private Map<String, Long> categories;
 
 
     public void dumpConfig(String path) {

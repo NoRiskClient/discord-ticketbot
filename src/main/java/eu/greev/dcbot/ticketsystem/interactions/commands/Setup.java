@@ -19,6 +19,8 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Slf4j
@@ -51,12 +53,22 @@ public class Setup extends AbstractCommand {
                     .setEphemeral(true)
                     .queue();
             return;
-        } else if (!(event.getOption("support-category").getAsChannel() instanceof Category)) {
+        } else if (!(event.getOption("unclaimed-category").getAsChannel() instanceof Category)) {
             event.replyEmbeds(error.addField("❌ **Ticket setup failed**", "Option 'category' has to be a valid category", false)
                             .build())
                     .setEphemeral(true)
                     .queue();
             return;
+        }
+
+        for (ICategory category : Main.CATEGORIES) {
+            if (!(event.getOption(category.getId() + "-category").getAsChannel() instanceof Category)) {
+                event.replyEmbeds(error.addField("❌ **Ticket setup failed**", "Option '" + category.getId() + "-category' has to be a valid category", false)
+                                .build())
+                        .setEphemeral(true)
+                        .queue();
+                return;
+            }
         }
 
         //#3fe245
@@ -78,15 +90,22 @@ public class Setup extends AbstractCommand {
         }
 
         TextChannel baseChannel = event.getOption("base-channel").getAsChannel().asTextChannel();
-        long supportCategory = event.getOption("support-category").getAsChannel().getIdLong();
+        long supportCategory = event.getOption("unclaimed-category").getAsChannel().getIdLong();
+
+        Map<String, Long> categories = new HashMap<>();
+
+        for (ICategory category : Main.CATEGORIES) {
+            categories.put(category.getId(), event.getOption(category.getId() + "-category").getAsChannel().getIdLong());
+        }
 
         config.setServerName(serverName);
         config.setServerLogo(serverLogo);
         config.setServerId(serverId);
-        config.setSupportCategory(supportCategory);
+        config.setUnclaimedCategory(supportCategory);
         config.setBaseChannel(baseChannel.getIdLong());
         config.setStaffId(staffId);
         config.setAddToTicketThread(new ArrayList<>());
+        config.setCategories(categories);
 
         config.dumpConfig("./Tickets/config.yml");
 
