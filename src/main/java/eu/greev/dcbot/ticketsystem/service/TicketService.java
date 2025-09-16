@@ -125,6 +125,8 @@ public class TicketService {
                 .setBaseMessage(msgId);
         allCurrentTickets.add(ticket);
 
+        ticketChannel.pinMessageById(msgId).queue();
+
         EmbedBuilder builder1 = new EmbedBuilder().setColor(Color.decode(config.getColor()))
                 .setFooter(config.getServerName(), config.getServerLogo())
                 .setDescription("""
