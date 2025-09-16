@@ -107,9 +107,13 @@ public class TicketService {
                         """)
                 .setAuthor(owner.getName(), null, owner.getEffectiveAvatarUrl());
 
+        StringBuilder details = new StringBuilder();
+
         for (Map.Entry<String, String> entry : info.entrySet()) {
-            builder.addField(entry.getKey(), entry.getValue(), false);
+            details.append("__").append(entry.getKey()).append("__\n").append(entry.getValue()).append("\n");
         }
+
+        builder.addField("Details", details.toString(), false);
 
         ticketChannel.sendMessage(owner.getAsMention() + " has created a new ticket").complete();
 
