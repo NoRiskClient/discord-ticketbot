@@ -23,6 +23,7 @@ public class Config {
     private String serverName;
     private String color;
     private String token;
+    private int maxTicketsPerUser = 3;
     private List<Long> addToTicketThread;
     private Map<Long, String> claimEmojis;
 

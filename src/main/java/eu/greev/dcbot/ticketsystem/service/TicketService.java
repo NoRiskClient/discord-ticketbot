@@ -56,13 +56,18 @@ public class TicketService {
         }, 0, TimeUnit.MINUTES.toMillis(3));
     }
 
-    public boolean createNewTicket(Map<String, String> info, ICategory category, User owner) {
+    public Optional<String> createNewTicket(Map<String, String> info, ICategory category, User owner) {
         Guild guild = jda.getGuildById(config.getServerId());
+        int openTickets = 0;
         for (TextChannel textChannel : guild.getTextChannels()) {
             Ticket tckt = getTicketByChannelId(textChannel.getIdLong());
             if (tckt != null && tckt.getOwner().equals(owner)) {
-                return false;
+                openTickets++;
             }
+        }
+
+        if (openTickets >= config.getMaxTicketsPerUser()) {
+            return Optional.of("You have reached the maximum number of open tickets (" + config.getMaxTicketsPerUser() + "). Please close an existing ticket before opening a new one.");
         }
 
         String infoJson;
@@ -71,7 +76,7 @@ public class TicketService {
             infoJson = mapper.writeValueAsString(info);
         } catch (JsonProcessingException e) {
             log.error("Couldn't parse ticket info map to json string! {}", e.getMessage());
-            return false;
+            return Optional.of("An internal error occurred while creating your ticket. Please contact a developer.");
         }
 
         Ticket ticket = Ticket.builder()
@@ -154,7 +159,7 @@ public class TicketService {
                 thread.addThreadMember(member).queue();
             }
         });
-        return true;
+        return Optional.empty();
     }
 
     public void closeTicket(Ticket ticket, boolean wasAccident, Member closer) {

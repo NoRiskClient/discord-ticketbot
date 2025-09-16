@@ -7,8 +7,6 @@ import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.PermissionOverride;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 
@@ -16,6 +14,7 @@ import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @AllArgsConstructor
 public class TicketModal implements Interaction {
@@ -42,20 +41,17 @@ public class TicketModal implements Interaction {
 
         info.replaceAll((k, v) -> escapeFormatting(v));
 
-        if (ticketService.createNewTicket(info, category, event.getUser())) {
+        Optional<String> error = ticketService.createNewTicket(info, category, event.getUser());
+
+        if (error.isEmpty()) {
             Ticket ticket = ticketService.getTicketByTicketId(ticketData.getLastTicketId());
             builder.setAuthor(event.getMember().getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
                     .setColor(Color.decode(config.getColor()))
                     .addField("✅ **Ticket created**", "Successfully created a ticket for you " + ticket.getTextChannel().getAsMention(), false);
             event.replyEmbeds(builder.build()).setEphemeral(true).queue();
         } else {
-            event.getGuild().getTextChannels().forEach(channel -> {
-                PermissionOverride override = channel.getPermissionOverride(event.getMember());
-                if (override == null) return;
-                if (ticketService.getTicketByChannelId(channel.getIdLong()) == null || !channel.getPermissionOverride(event.getMember()).getAllowed().contains(Permission.VIEW_CHANNEL)) return;
+            builder.addField("❌ **Creating ticket failed**", error.get(), false);
 
-                builder.addField("❌ **Creating ticket failed**", "There is already an opened ticket for you. Please use this instead first or close it -> " + channel.getAsMention(), false);
-            });
             event.replyEmbeds(builder.build()).setEphemeral(true).queue();
         }
     }
