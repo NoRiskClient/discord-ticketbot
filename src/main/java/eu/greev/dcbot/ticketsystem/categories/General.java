@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class General implements ICategory {
@@ -38,8 +39,10 @@ public class General implements ICategory {
 
     @Override
     public Map<String, String> getInfo(ModalInteractionEvent event) {
-        return Map.of(
-                "Reason", event.getValue("reason").getAsString()
-        );
+        Map<String, String> map = new LinkedHashMap<>();
+
+        map.put("Reason", event.getValue("reason").getAsString());
+
+        return map;
     }
 }
