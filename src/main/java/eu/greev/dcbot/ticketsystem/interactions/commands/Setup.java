@@ -122,9 +122,9 @@ public class Setup extends AbstractCommand {
                 .setColor(color)
                 .addField(new MessageEmbed.Field("**Support request**", """
                         You have questions or a problem?
-                        Just click the one of the buttons below or use </ticket create:%s> somewhere else.
+                        Just click the one of the buttons below.
                         We will try to handle your ticket as soon as possible.
-                        """.formatted(Main.getCreateCommandId()), false));
+                        """, false));
 
         StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
                 .setPlaceholder("Select your ticket topic");
