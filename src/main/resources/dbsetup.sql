@@ -1,32 +1,34 @@
 CREATE TABLE IF NOT EXISTS tickets
 (
-    ticketID      INTEGER PRIMARY KEY    NOT NULL,
+    ticketID               INTEGER PRIMARY KEY  NOT NULL,
 
-    channelID     VARCHAR   DEFAULT ""   NOT NULL,
+    channelID              VARCHAR DEFAULT ""   NOT NULL,
 
-    threadID      VARCHAR   DEFAULT ""   NOT NULL,
+    threadID               VARCHAR DEFAULT ""   NOT NULL,
 
-    isWaiting     BOOL      DEFAULT 0    NOT NULL,
+    isWaiting              BOOL    DEFAULT 0    NOT NULL,
 
-    waitingSince  TIMESTAMP DEFAULT NULL NULL,
+    waitingSince           VARCHAR DEFAULT NULL NULL,
 
-    remindersSent INTEGER   DEFAULT 0    NOT NULL,
+    remindersSent          INTEGER DEFAULT 0    NOT NULL,
 
-    category      VARCHAR   DEFAULT ""   NOT NULL,
+    supporterRemindersSent INTEGER DEFAULT 0    NOT NULL,
 
-    info          VARCHAR   DEFAULT "{}" NOT NULL,
+    category               VARCHAR DEFAULT ""   NOT NULL,
 
-    owner         VARCHAR   DEFAULT ""   NOT NULL,
+    info                   VARCHAR DEFAULT "{}" NOT NULL,
 
-    supporter     VARCHAR   DEFAULT ""   NOT NULL,
+    owner                  VARCHAR DEFAULT ""   NOT NULL,
 
-    involved      VARCHAR   DEFAULT ""   NOT NULL,
+    supporter              VARCHAR DEFAULT ""   NOT NULL,
 
-    baseMessage   VARCHAR   DEFAULT ""   NOT NULL,
+    involved               VARCHAR DEFAULT ""   NOT NULL,
 
-    isOpen        BOOL      DEFAULT 1,
+    baseMessage            VARCHAR DEFAULT ""   NOT NULL,
 
-    closer        VARCHAR   DEFAULT ""
+    isOpen                 BOOL    DEFAULT 1,
+
+    closer                 VARCHAR DEFAULT ""
 );
 CREATE TABLE IF NOT EXISTS messages
 (

@@ -173,6 +173,8 @@ public class Main {
         registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
 
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
+
+
     }
 
     private static void initDatasource() {

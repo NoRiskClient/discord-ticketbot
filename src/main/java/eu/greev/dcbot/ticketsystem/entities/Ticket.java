@@ -11,7 +11,7 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -27,8 +27,9 @@ public class Ticket {
     @Getter private Map<String, String> info;
     @Getter @Builder.Default private ArrayList<String> involved = new ArrayList<>();
     @Getter boolean isWaiting;
-    @Getter private LocalDateTime waitingSince;
+    @Getter private Instant waitingSince;
     @Getter private int remindersSent;
+    @Getter private int supporterRemindersSent;
     @Getter @Setter String tempMsgId;
     @Getter @Setter Transcript transcript;
     @Getter private String baseMessage;
@@ -75,7 +76,7 @@ public class Ticket {
         return this;
     }
 
-    public Ticket setWaitingSince(LocalDateTime waitingSince) {
+    public Ticket setWaitingSince(Instant waitingSince) {
         this.waitingSince = waitingSince;
         this.save();
         return this;
@@ -83,6 +84,12 @@ public class Ticket {
 
     public Ticket setRemindersSent(int remindersSent) {
         this.remindersSent = remindersSent;
+        this.save();
+        return this;
+    }
+
+    public Ticket setSupporterRemindersSent(int supporterRemindersSent) {
+        this.supporterRemindersSent = supporterRemindersSent;
         this.save();
         return this;
     }

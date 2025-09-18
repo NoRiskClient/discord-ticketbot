@@ -10,7 +10,7 @@ import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 import java.awt.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class SetWaiting extends AbstractCommand {
     private final EmbedBuilder wrongChannel;
@@ -44,7 +44,7 @@ public class SetWaiting extends AbstractCommand {
                 .setColor(Color.RED);
         if (!ticket.isWaiting()) {
             ticketService.toggleWaiting(ticket, true);
-            ticket.setWaitingSince(LocalDateTime.now());
+            ticket.setWaitingSince(Instant.now());
             builder.setAuthor(member.getEffectiveName(), null, member.getEffectiveAvatarUrl())
                     .setDescription("Waiting for response.")
                     .setColor(Color.decode(config.getColor()));

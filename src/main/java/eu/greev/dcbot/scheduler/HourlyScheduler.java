@@ -10,18 +10,19 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 
 import java.awt.*;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @AllArgsConstructor
 public class HourlyScheduler {
     private static final int REMIND_INTERVAL_HOURS = 24;
+    private static final int REMIND_SUPPORTER_HOURS = 24;
     private static final int AUTO_CLOSE_HOURS = 96;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -43,31 +44,39 @@ public class HourlyScheduler {
     private void run() {
         log.info("Running hourly ticket check...");
 
-        List<Integer> waitingTickets = ticketData.getOpenWaitingTicketsIds();
+        List<Integer> ticketsIds = ticketData.getOpenTicketsIds();
 
-        for (Integer ticketId : waitingTickets) {
+        for (Integer ticketId : ticketsIds) {
             log.debug("Checking ticket ID: {}", ticketId);
             Ticket ticket = ticketService.getTicketByTicketId(ticketId);
 
             boolean shouldRemind = ticket.isWaiting() && ticket.getWaitingSince() != null &&
-                    ticket.getWaitingSince().plusHours((long) REMIND_INTERVAL_HOURS * (ticket.getRemindersSent() + 1)).isBefore(LocalDateTime.now());
+                    ticket.getWaitingSince()
+                            .plus((long) REMIND_INTERVAL_HOURS * (ticket.getRemindersSent() + 1), ChronoUnit.HOURS)
+                            .isBefore(Instant.now());
 
             boolean shouldClose = ticket.isWaiting() && ticket.getWaitingSince() != null &&
-                    ticket.getWaitingSince().plusHours(AUTO_CLOSE_HOURS).isBefore(LocalDateTime.now());
+                    ticket.getWaitingSince()
+                            .plus(AUTO_CLOSE_HOURS, ChronoUnit.HOURS)
+                            .isBefore(Instant.now());
 
-            log.debug("Should remind: {}, Should close: {}", shouldRemind, shouldClose);
+            AtomicBoolean shouldRemindSupporter = new AtomicBoolean(false);
 
             if (shouldClose) {
                 ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember());
-                continue;
-            }
-
-            if (shouldRemind) {
+            } else if (shouldRemind) {
                 EmbedBuilder builder = new EmbedBuilder()
                         .setTitle(String.format("⏰ Reminder: Waiting for your response (%s/%s)", ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
                         .setColor(Color.decode(config.getColor()))
                         .appendDescription("**Our support team is waiting for you to respond**")
-                        .appendDescription(String.format("\nIf you do not respond, the ticket will be automatically closed <t:%d:R>.", ticket.getWaitingSince().plusHours(AUTO_CLOSE_HOURS + 1).withMinute(0).toEpochSecond(ZonedDateTime.now().getOffset())))
+                        .appendDescription(String.format("\nIf you do not respond, the ticket will be automatically closed <t:%d:R>.",
+                                ticket.getWaitingSince()
+                                        .plus(Duration.ofHours(AUTO_CLOSE_HOURS + 1))
+                                        .atZone(ZoneId.of("UTC"))
+                                        .withMinute(0)
+                                        .toInstant()
+                                        .toEpochMilli() / 1000)
+                        )
                         .setFooter(config.getServerName(), config.getServerLogo());
 
                 ticket.getTextChannel()
@@ -76,7 +85,26 @@ public class HourlyScheduler {
                         .queue();
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
+            } else {
+                ticket.getTextChannel()
+                        .retrieveMessageById(ticket.getTextChannel().getLatestMessageId())
+                        .queue(message -> {
+                            shouldRemindSupporter.set(!ticket.isWaiting() && ticket.getSupporter() != null &&
+                                    message.getTimeCreated()
+                                            .plusHours((long) REMIND_SUPPORTER_HOURS * (ticket.getSupporterRemindersSent() + 1))
+                                            .isBefore(Instant.now().atZone(ZoneId.of("UTC")).toOffsetDateTime()));
+
+                            if (shouldRemindSupporter.get()) {
+                                ticket.getThreadChannel()
+                                        .sendMessage(ticket.getSupporter().getAsMention())
+                                        .queue();
+
+                                ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
+                            }
+                        });
             }
+
+            log.debug("Should remind: {}, Should close: {}", shouldRemind, shouldClose);
 
             try {
                 TimeUnit.SECONDS.sleep(10L);
