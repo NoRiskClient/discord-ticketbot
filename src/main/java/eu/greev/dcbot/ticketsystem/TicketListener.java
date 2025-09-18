@@ -55,42 +55,38 @@ public class TicketListener extends ListenerAdapter {
 
     @Override
     public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
-        Ticket ticket = ticketService.getOpenTicket(event.getUser());
-        if (ticket == null) {
-            return;
+        for (Ticket ticket : ticketService.getOpenTickets(event.getUser())) {
+            ticket.getTranscript().addLogMessage(ticket.getOwner().getName() + " has left the server.", Instant.now().getEpochSecond(), ticket.getId());
+            EmbedBuilder info = new EmbedBuilder()
+                    .setColor(Color.RED)
+                    .setFooter(config.getServerName(), config.getServerLogo())
+                    .addField("ℹ️ **Member left**", ticket.getOwner().getAsMention() + " has left the server.", false);
+            MessageCreateBuilder messageBuilder = new MessageCreateBuilder()
+                    .addEmbeds(info.build());
+            if (ticket.getSupporter() != null) {
+                messageBuilder.addContent(ticket.getSupporter().getAsMention());
+            }
+            ticket.getTextChannel().sendMessage(messageBuilder.build()).queue();
         }
-        ticket.getTranscript().addLogMessage(ticket.getOwner().getName() + " has left the server.", Instant.now().getEpochSecond(), ticket.getId());
-        EmbedBuilder info = new EmbedBuilder()
-                .setColor(Color.RED)
-                .setFooter(config.getServerName(), config.getServerLogo())
-                .addField("ℹ️ **Member left**", ticket.getOwner().getAsMention() + " has left the server.", false);
-        MessageCreateBuilder messageBuilder = new MessageCreateBuilder()
-                .addEmbeds(info.build());
-        if (ticket.getSupporter() != null) {
-            messageBuilder.addContent(ticket.getSupporter().getAsMention());
-        }
-        ticket.getTextChannel().sendMessage(messageBuilder.build()).queue();
     }
 
     @Override
     public void onGuildMemberJoin(GuildMemberJoinEvent event) {
-        Ticket ticket = ticketService.getOpenTicket(event.getUser());
-        if (ticket == null) {
-            return;
-        }
-        ticket.getTextChannel().upsertPermissionOverride(event.getMember()).setAllowed(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY, Permission.MESSAGE_SEND).queue();
-        ticket.getTranscript().addLogMessage(ticket.getOwner().getName() + " has rejoined the server.", Instant.now().getEpochSecond(), ticket.getId());
+        for (Ticket ticket : ticketService.getOpenTickets(event.getUser())) {
+            ticket.getTextChannel().upsertPermissionOverride(event.getMember()).setAllowed(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY, Permission.MESSAGE_SEND).queue();
+            ticket.getTranscript().addLogMessage(ticket.getOwner().getName() + " has rejoined the server.", Instant.now().getEpochSecond(), ticket.getId());
 
-        EmbedBuilder info = new EmbedBuilder()
-                .setColor(Color.RED)
-                .setFooter(config.getServerName(), config.getServerLogo())
-                .addField("ℹ️ **Member rejoined**", ticket.getOwner().getAsMention() + " has rejoined the server and was granted access to that ticket again.", false);
-        MessageCreateBuilder messageBuilder = new MessageCreateBuilder()
-                .addEmbeds(info.build());
-        if (ticket.getSupporter() != null) {
-            messageBuilder.addContent(ticket.getSupporter().getAsMention());
+            EmbedBuilder info = new EmbedBuilder()
+                    .setColor(Color.RED)
+                    .setFooter(config.getServerName(), config.getServerLogo())
+                    .addField("ℹ️ **Member rejoined**", ticket.getOwner().getAsMention() + " has rejoined the server and was granted access to that ticket again.", false);
+            MessageCreateBuilder messageBuilder = new MessageCreateBuilder()
+                    .addEmbeds(info.build());
+            if (ticket.getSupporter() != null) {
+                messageBuilder.addContent(ticket.getSupporter().getAsMention());
+            }
+            ticket.getTextChannel().sendMessage(messageBuilder.build()).queue();
         }
-        ticket.getTextChannel().sendMessage(messageBuilder.build()).queue();
     }
 
     @Override

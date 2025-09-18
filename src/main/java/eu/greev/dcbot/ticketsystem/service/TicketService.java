@@ -21,7 +21,6 @@ import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
-import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 import java.time.Instant;
@@ -298,12 +297,11 @@ public class TicketService {
         return ticketData.getTicketIdsByUser(String.valueOf(owner));
     }
 
-    public @Nullable Ticket getOpenTicket(User owner) {
-        Integer ticketId = ticketData.getOpenTicketOfUser(owner.getId());
-        if (ticketId == null) {
-            return null;
-        }
-        return this.getTicketByTicketId(ticketId);
+    public List<Ticket> getOpenTickets(User owner) {
+        return ticketData.getOpenTicketsOfUser(owner.getId())
+                .stream()
+                .map(this::getTicketByTicketId)
+                .toList();
     }
 
     private void saveTranscriptChanges(List<TranscriptEntity> changes) {

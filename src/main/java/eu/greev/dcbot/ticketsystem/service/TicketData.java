@@ -95,11 +95,11 @@ public class TicketData {
                 .list());
     }
 
-    public Integer getOpenTicketOfUser(String user) {
+    public List<Integer> getOpenTicketsOfUser(String user) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT ticketID FROM tickets WHERE owner=? AND isOpen=true")
                 .bind(0, user)
                 .mapTo(Integer.class)
-                .findFirst().orElse(null));
+                .list());
     }
 
     public Integer getLastTicketId() {
