@@ -30,6 +30,7 @@ public class Ticket {
     @Getter private Instant waitingSince;
     @Getter private int remindersSent;
     @Getter private int supporterRemindersSent;
+    @Getter private String closeMessage;
     @Getter @Setter String tempMsgId;
     @Getter @Setter Transcript transcript;
     @Getter private String baseMessage;
@@ -90,6 +91,12 @@ public class Ticket {
 
     public Ticket setSupporterRemindersSent(int supporterRemindersSent) {
         this.supporterRemindersSent = supporterRemindersSent;
+        this.save();
+        return this;
+    }
+
+    public Ticket setCloseMessage(String closeMessage) {
+        this.closeMessage = closeMessage;
         this.save();
         return this;
     }

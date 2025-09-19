@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS tickets
 
     supporterRemindersSent INTEGER DEFAULT 0    NOT NULL,
 
+    closeMessage           VARCHAR DEFAULT NULL NULL,
+
     category               VARCHAR DEFAULT ""   NOT NULL,
 
     info                   VARCHAR DEFAULT "{}" NOT NULL,

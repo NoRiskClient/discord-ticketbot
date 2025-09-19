@@ -6,6 +6,8 @@ import eu.greev.dcbot.ticketsystem.categories.*;
 import eu.greev.dcbot.ticketsystem.interactions.*;
 import eu.greev.dcbot.ticketsystem.interactions.buttons.*;
 import eu.greev.dcbot.ticketsystem.interactions.commands.*;
+import eu.greev.dcbot.ticketsystem.interactions.modals.TicketConfirmMessageModal;
+import eu.greev.dcbot.ticketsystem.interactions.modals.TicketModal;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
@@ -152,6 +154,8 @@ public class Main {
         registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService));
 
         registerInteraction("ticket-confirm", new TicketConfirm(ticketService));
+        registerInteraction("ticket-confirm-message", new TicketConfirmMessage());
+        registerInteraction("ticket-confirm-message-modal", new TicketConfirmMessageModal(ticketService));
         registerInteraction("setup", new Setup(config, ticketService, missingPerm, jda));
         registerInteraction("info", new LoadTicket(config, ticketService, missingPerm, jda));
         registerInteraction("get-tickets", new GetTickets(config, ticketService, missingPerm, jda));

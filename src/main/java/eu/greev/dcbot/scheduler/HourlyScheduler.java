@@ -63,7 +63,7 @@ public class HourlyScheduler {
             AtomicBoolean shouldRemindSupporter = new AtomicBoolean(false);
 
             if (shouldClose) {
-                ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember());
+                ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Automatic close due to inactivity");
             } else if (shouldRemind) {
                 EmbedBuilder builder = new EmbedBuilder()
                         .setTitle(String.format("⏰ Reminder: Waiting for your response (%s/%s)", ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))

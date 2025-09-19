@@ -52,6 +52,7 @@ public class TicketData {
                                 .isWaiting(resultSet.getBoolean("isWaiting"))
                                 .remindersSent(resultSet.getInt("remindersSent"))
                                 .supporterRemindersSent(resultSet.getInt("supporterRemindersSent"))
+                                .closeMessage(resultSet.getString("closeMessage"))
                                 .waitingSince(resultSet.getString("waitingSince") != null ? Instant.parse(resultSet.getString("waitingSince")) : null)
                                 .baseMessage(resultSet.getString("baseMessage"))
                                 .involved(new ArrayList<>(List.of(resultSet.getString("involved").split(", "))));
@@ -120,7 +121,7 @@ public class TicketData {
     public void saveTicket(Ticket ticket) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            jdbi.withHandle(handle -> handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=? WHERE ticketID =?")
+            jdbi.withHandle(handle -> handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=?, closeMessage=? WHERE ticketID =?")
                     .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                     .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
                     .bind(2, ticket.getCategory().getId())
@@ -135,7 +136,8 @@ public class TicketData {
                     .bind(10, ticket.getWaitingSince() == null ? null : ticket.getWaitingSince().toString())
                     .bind(11, ticket.getRemindersSent())
                     .bind(12, ticket.getSupporterRemindersSent())
-                    .bind(13, ticket.getId())
+                    .bind(13, ticket.getCloseMessage())
+                    .bind(14, ticket.getId())
                     .execute());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

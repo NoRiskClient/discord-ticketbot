@@ -60,6 +60,7 @@ public class TicketClose implements Interaction {
                 .addField("Close Confirmation", "Do you really want to close this ticket?", true);
         event.replyEmbeds(builder.build())
                 .addActionRow(Button.primary("ticket-confirm", "✔️ Close"))
+                .addActionRow(Button.primary("ticket-confirm-message", "✔️ Close with message"))
                 .setEphemeral(true)
                 .queue();
     }

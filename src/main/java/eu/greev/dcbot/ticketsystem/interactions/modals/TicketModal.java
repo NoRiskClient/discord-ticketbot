@@ -1,7 +1,8 @@
-package eu.greev.dcbot.ticketsystem.interactions;
+package eu.greev.dcbot.ticketsystem.interactions.modals;
 
 import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;

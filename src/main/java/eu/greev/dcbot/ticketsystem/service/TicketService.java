@@ -161,10 +161,10 @@ public class TicketService {
         return Optional.empty();
     }
 
-    public void closeTicket(Ticket ticket, boolean wasAccident, Member closer) {
+    public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message) {
         Transcript transcript = ticket.getTranscript();
         int ticketId = ticket.getId();
-        ticket.setCloser(closer.getUser()).setOpen(false);
+        ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message);
         if (wasAccident) {
             ticket.getTextChannel().delete().queue();
             jdbi.withHandle(handle -> handle.createUpdate("DELETE FROM tickets WHERE ticketID=?").bind(0, ticketId).execute());
@@ -179,10 +179,16 @@ public class TicketService {
                 .bind(1, ticketId)
                 .execute());
 
-        transcript.addLogMessage("[" + closer.getUser().getName() + "] closed the ticket.", Instant.now().getEpochSecond(), ticketId);
+        transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getUser().getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
 
         EmbedBuilder builder = new EmbedBuilder().setTitle("Ticket " + ticketId)
-                .addField("Text Transcript⠀⠀⠀⠀⠀⠀⠀⠀", "See attachment", false)
+                .addField("Closed by", closer.getAsMention(), false);
+
+        if (message != null && !message.isBlank()) {
+            builder.addField("Message", message, true);
+        }
+
+        builder.addField("Text Transcript⠀⠀⠀⠀⠀⠀⠀⠀", "See attachment", false)
                 .setColor(Color.decode(config.getColor()))
                 .setFooter(config.getServerName(), config.getServerLogo());
 
