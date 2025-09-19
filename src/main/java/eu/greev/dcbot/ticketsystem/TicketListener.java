@@ -151,6 +151,9 @@ public class TicketListener extends ListenerAdapter {
             ticket.setWaitingSince(null);
             ticket.setRemindersSent(0);
         }
+
+        ticket.setSupporterRemindersSent(0);
+
         ticket.getTranscript().addMessage(event.getMessage(), ticket.getId());
     }
 
