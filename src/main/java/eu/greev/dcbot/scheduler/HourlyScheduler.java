@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 
 import java.awt.*;
 import java.time.*;
@@ -79,10 +80,23 @@ public class HourlyScheduler {
                         )
                         .setFooter(config.getServerName(), config.getServerLogo());
 
-                ticket.getTextChannel()
-                        .sendMessage(ticket.getOwner().getAsMention())
-                        .setEmbeds(builder.build())
-                        .queue();
+                EmbedBuilder threadMessageBuilder = new EmbedBuilder()
+                        .setTitle("The reminder was sent to %s (%s/%s)".formatted(ticket.getOwner().getAsMention(), ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
+                        .setColor(Color.decode(config.getColor()))
+                        .setFooter(config.getServerName(), config.getServerLogo());
+
+                try {
+                    ticket.getOwner().openPrivateChannel()
+                            .flatMap(channel -> channel.sendMessageEmbeds(builder.build()))
+                            .complete();
+                } catch (ErrorResponseException e) {
+                    ticket.getTextChannel()
+                            .sendMessage(ticket.getOwner().getAsMention())
+                            .setEmbeds(builder.build())
+                            .queue();
+                }
+
+                ticket.getThreadChannel().sendMessageEmbeds(threadMessageBuilder.build()).queue();
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
             } else {
