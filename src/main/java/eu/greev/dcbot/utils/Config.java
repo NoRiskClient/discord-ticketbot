@@ -8,6 +8,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +26,7 @@ public class Config {
     private String token;
     private int maxTicketsPerUser = 3;
     private List<Long> addToTicketThread;
-    private Map<Long, String> claimEmojis;
+    private Map<Long, String> claimEmojis = new HashMap<>();
     private Map<String, Long> categories;
 
 
