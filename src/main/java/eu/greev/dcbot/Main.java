@@ -97,6 +97,7 @@ public class Main {
         registerCategory(new Creator(), config, ticketService, ticketData);
         registerCategory(new Bug(), config, ticketService, ticketData);
         registerCategory(new Payment(), config, ticketService, ticketData);
+        registerCategory(new Security(), config, ticketService, ticketData);
 
         SubcommandData setupCommand = new SubcommandData("setup", "Setup the System")
                 .addOption(OptionType.CHANNEL, "base-channel", "The channel where the ticket select menu should be", true)
