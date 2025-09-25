@@ -13,6 +13,7 @@ public class TicketConfirmMessageModal implements Interaction {
     @Override
     public void execute(Event evt) {
         ModalInteractionEvent event = (ModalInteractionEvent) evt;
+        event.deferEdit().queue();
         ticketService.closeTicket(ticketService.getTicketByChannelId(event.getChannel().getIdLong()), false, event.getMember(), event.getValue("message").getAsString());
     }
 }
