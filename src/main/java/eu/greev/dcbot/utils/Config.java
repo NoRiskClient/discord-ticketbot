@@ -27,8 +27,7 @@ public class Config {
     private int maxTicketsPerUser = 3;
     private List<Long> addToTicketThread;
     private Map<Long, String> claimEmojis = new HashMap<>();
-    private Map<String, Long> categories;
-
+    private Map<String, Long> categories = new HashMap<>();
 
     public void dumpConfig(String path) {
         DumperOptions options = new DumperOptions();

@@ -213,7 +213,14 @@ public class TicketService {
 
         ticket.getThreadChannel().addThreadMember(supporter).queue();
 
-        ticket.getTextChannel().getManager().setParent(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId()))).queue();
+        if (config.getCategories().get(ticket.getCategory().getId()) != null) {
+            ticket.getTextChannel().getManager().setParent(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId()))).queue();
+        } else {
+            EmbedBuilder error = new EmbedBuilder()
+                    .setColor(Color.YELLOW)
+                    .setDescription("❗**Category %s doesn't have a channel category assigned, please tell an Admin to add it to the config!**".formatted(ticket.getCategory().getId()));
+            ticket.getTextChannel().sendMessageEmbeds(error.build()).queue();
+        }
 
         ticket.getTranscript().addLogMessage("[" + supporter.getName() + "] claimed the ticket.", Instant.now().getEpochSecond(), ticket.getId());
         ticket.getTextChannel().editMessageComponentsById(ticket.getBaseMessage())

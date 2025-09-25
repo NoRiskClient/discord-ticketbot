@@ -99,18 +99,6 @@ public class Main {
         registerCategory(new Payment(), config, ticketService, ticketData);
         registerCategory(new Security(), config, ticketService, ticketData);
 
-        SubcommandData setupCommand = new SubcommandData("setup", "Setup the System")
-                .addOption(OptionType.CHANNEL, "base-channel", "The channel where the ticket select menu should be", true)
-                .addOption(OptionType.CHANNEL, "unclaimed-category", "The category where the tickets should create", true);
-
-        for (ICategory category : CATEGORIES) {
-            setupCommand.addOption(OptionType.CHANNEL, category.getId() + "-category", "A category for " + category.getLabel() + " tickets", true);
-        }
-
-        setupCommand
-                .addOption(OptionType.ROLE, "staff", "The role which is the team role", true)
-                .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false);
-
         jda.updateCommands().addCommands(Commands.slash("ticket", "Manage the ticket system")
                 .addSubcommands(new SubcommandData("add", "Add a User to this ticket")
                         .addOption(OptionType.USER, "member", "The user adding to the current ticket", true))
@@ -127,7 +115,11 @@ public class Main {
                         .addOption(OptionType.INTEGER, "ticket-id", "The id of the ticket", true))
                 .addSubcommands(new SubcommandData("get-tickets", "Get all ticket ids by member")
                         .addOption(OptionType.USER, "member", "The owner of the tickets", true))
-                .addSubcommands(setupCommand)
+                .addSubcommands(new SubcommandData("setup", "Setup the System")
+                        .addOption(OptionType.CHANNEL, "base-channel", "The channel where the ticket select menu should be", true)
+                        .addOption(OptionType.CHANNEL, "unclaimed-category", "The category where the tickets should create", true)
+                        .addOption(OptionType.ROLE, "staff", "The role which is the team role", true)
+                        .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false))
                 .addSubcommands(new SubcommandData("set-claim-emoji", "Set your personal claim emoji")
                         .addOption(OptionType.STRING, "emoji", "The emoji you want to set", true))
                 .addSubcommandGroups(new SubcommandGroupData("thread", "Manages the ticket thread")

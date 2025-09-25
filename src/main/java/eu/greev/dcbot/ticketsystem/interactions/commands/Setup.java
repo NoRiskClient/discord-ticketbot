@@ -19,8 +19,6 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Slf4j
@@ -61,16 +59,6 @@ public class Setup extends AbstractCommand {
             return;
         }
 
-        for (ICategory category : Main.CATEGORIES) {
-            if (!(event.getOption(category.getId() + "-category").getAsChannel() instanceof Category)) {
-                event.replyEmbeds(error.addField("❌ **Ticket setup failed**", "Option '" + category.getId() + "-category' has to be a valid category", false)
-                                .build())
-                        .setEphemeral(true)
-                        .queue();
-                return;
-            }
-        }
-
         //#3fe245
         Color color = new Color(63, 226, 69, 255);
         OptionMapping clr = event.getOption("color");
@@ -92,12 +80,6 @@ public class Setup extends AbstractCommand {
         TextChannel baseChannel = event.getOption("base-channel").getAsChannel().asTextChannel();
         long supportCategory = event.getOption("unclaimed-category").getAsChannel().getIdLong();
 
-        Map<String, Long> categories = new HashMap<>();
-
-        for (ICategory category : Main.CATEGORIES) {
-            categories.put(category.getId(), event.getOption(category.getId() + "-category").getAsChannel().getIdLong());
-        }
-
         config.setServerName(serverName);
         config.setServerLogo(serverLogo);
         config.setServerId(serverId);
@@ -105,7 +87,6 @@ public class Setup extends AbstractCommand {
         config.setBaseChannel(baseChannel.getIdLong());
         config.setStaffId(staffId);
         config.setAddToTicketThread(new ArrayList<>());
-        config.setCategories(categories);
 
         config.dumpConfig("./Tickets/config.yml");
 
@@ -140,7 +121,7 @@ public class Setup extends AbstractCommand {
         EmbedBuilder builder1 = new EmbedBuilder().setFooter(serverName, serverLogo)
                 .setColor(color)
                 .setAuthor(member.getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
-                .addField("✅ **Ticket created**", "Successfully setup ticketsystem " + baseChannel.getAsMention(), false);
+                .addField("✅ **Ticket created**", "Successfully setup ticketsystem.\nDon't forget to add the ticket category ids to the config! " + baseChannel.getAsMention(), false);
 
         event.replyEmbeds(builder1.build()).setEphemeral(true).queue();
     }
