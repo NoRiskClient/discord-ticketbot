@@ -28,11 +28,12 @@ public class TicketModal implements Interaction {
     @Override
     public void execute(Event evt) {
         ModalInteractionEvent event = (ModalInteractionEvent) evt;
+        event.deferReply(true).queue();
         if (config.getServerName() == null) {
             EmbedBuilder error = new EmbedBuilder()
                     .setColor(Color.RED)
                     .setDescription("❌ **Ticketsystem wasn't setup, please tell an Admin to use </ticket setup:0>!**");
-            event.replyEmbeds(error.build()).setEphemeral(true).queue();
+            event.getHook().sendMessageEmbeds(error.build()).setEphemeral(true).queue();
             return;
         }
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.RED)
@@ -49,11 +50,11 @@ public class TicketModal implements Interaction {
             builder.setAuthor(event.getMember().getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
                     .setColor(Color.decode(config.getColor()))
                     .addField("✅ **Ticket created**", "Successfully created a ticket for you " + ticket.getTextChannel().getAsMention(), false);
-            event.replyEmbeds(builder.build()).setEphemeral(true).queue();
+            event.getHook().sendMessageEmbeds(builder.build()).setEphemeral(true).queue();
         } else {
             builder.addField("❌ **Creating ticket failed**", error.get(), false);
 
-            event.replyEmbeds(builder.build()).setEphemeral(true).queue();
+            event.getHook().sendMessageEmbeds(builder.build()).setEphemeral(true).queue();
         }
     }
 
