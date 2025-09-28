@@ -143,4 +143,44 @@ public class TicketData {
             throw new RuntimeException(e);
         }
     }
+
+    // Stats queries
+    public int countTotalTickets() {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets")
+                .mapTo(Integer.class)
+                .findOne()
+                .orElse(0));
+    }
+
+    public int countOpenTickets() {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isOpen = true")
+                .mapTo(Integer.class)
+                .findOne()
+                .orElse(0));
+    }
+
+    public int countWaitingTickets() {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isWaiting = true")
+                .mapTo(Integer.class)
+                .findOne()
+                .orElse(0));
+    }
+
+    public java.util.LinkedHashMap<String, Integer> topClosers(int limit) {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT closer, COUNT(*) as c FROM tickets WHERE isOpen = false AND closer != '' GROUP BY closer ORDER BY c DESC LIMIT :limit")
+                .bind("limit", limit)
+                .reduceRows(new java.util.LinkedHashMap<String, Integer>(), (map, row) -> {
+                    map.put(row.getColumn("closer", String.class), row.getColumn("c", Integer.class));
+                    return map;
+                }));
+    }
+
+    public java.util.LinkedHashMap<String, Integer> topOwnersWithOpenTickets(int limit) {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT owner, COUNT(*) as c FROM tickets WHERE isOpen = true AND owner != '' GROUP BY owner ORDER BY c DESC LIMIT :limit")
+                .bind("limit", limit)
+                .reduceRows(new java.util.LinkedHashMap<String, Integer>(), (map, row) -> {
+                    map.put(row.getColumn("owner", String.class), row.getColumn("c", Integer.class));
+                    return map;
+                }));
+    }
 }
