@@ -171,7 +171,10 @@ public class TicketListener extends ListenerAdapter {
         if (isValid(event) || event.getAuthor().isBot()) return;
 
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
-        ticket.getTranscript().editMessage(event.getMessageIdLong(), event.getMessage().getContentDisplay(), event.getMessage().getTimeEdited().toInstant().getEpochSecond());
+        Instant editInstant = event.getMessage().getTimeEdited() != null
+                ? event.getMessage().getTimeEdited().toInstant()
+                : event.getMessage().getTimeCreated().toInstant();
+        ticket.getTranscript().editMessage(event.getMessageIdLong(), event.getMessage().getContentDisplay(), editInstant.getEpochSecond());
     }
 
     @Override

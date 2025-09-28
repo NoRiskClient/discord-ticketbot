@@ -100,22 +100,37 @@ public class HourlyScheduler {
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
             } else {
-                ticket.getTextChannel()
-                        .retrieveMessageById(ticket.getTextChannel().getLatestMessageId())
-                        .queue(message -> {
-                            shouldRemindSupporter.set(!ticket.isWaiting() && ticket.getSupporter() != null &&
-                                    message.getTimeCreated()
-                                            .plusHours((long) REMIND_SUPPORTER_HOURS * (ticket.getSupporterRemindersSent() + 1))
-                                            .isBefore(Instant.now().atZone(ZoneId.of("UTC")).toOffsetDateTime()));
+                if (ticket.getTextChannel() == null || ticket.getThreadChannel() == null) {
+                    log.warn("Skipping supporter reminder for ticket {} because channel or thread is null", ticket.getId());
+                } else {
+                    String latestId = ticket.getTextChannel().getLatestMessageId();
+                    if (latestId == null || latestId.equals("0")) {
+                        log.debug("No latest message found for channel {}. Skipping reminder check.", ticket.getTextChannel().getId());
+                    } else {
+                        ticket.getTextChannel()
+                                .retrieveMessageById(latestId)
+                                .queue(message -> {
+                                            shouldRemindSupporter.set(!ticket.isWaiting() && ticket.getSupporter() != null &&
+                                                    message.getTimeCreated()
+                                                            .plusHours((long) REMIND_SUPPORTER_HOURS * (ticket.getSupporterRemindersSent() + 1))
+                                                            .isBefore(Instant.now().atZone(ZoneId.of("UTC")).toOffsetDateTime()));
 
-                            if (shouldRemindSupporter.get()) {
-                                ticket.getThreadChannel()
-                                        .sendMessage(ticket.getSupporter().getAsMention())
-                                        .queue();
+                                            if (shouldRemindSupporter.get()) {
+                                                ticket.getThreadChannel()
+                                                        .sendMessage(ticket.getSupporter().getAsMention())
+                                                        .queue();
 
-                                ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
-                            }
-                        });
+                                                ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
+                                            }
+                                        }, failure -> {
+                                            if (failure instanceof ErrorResponseException ere) {
+                                                log.warn("Failed to retrieve latest message for channel {} (ticket {}): {} - {}", ticket.getTextChannel().getId(), ticket.getId(), ere.getErrorCode(), ere.getMeaning());
+                                            } else {
+                                                log.warn("Failed to retrieve latest message for channel {} (ticket {}): {}", ticket.getTextChannel().getId(), ticket.getId(), failure.getMessage());
+                                            }
+                                        });
+                    }
+                }
             }
 
             log.debug("Should remind: {}, Should close: {}", shouldRemind, shouldClose);
