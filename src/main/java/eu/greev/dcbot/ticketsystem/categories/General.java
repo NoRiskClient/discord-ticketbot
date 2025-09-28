@@ -29,7 +29,7 @@ public class General implements ICategory {
         TextInput reason = TextInput.create("reason", "Reason", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Please describe your issue or question in detail.")
                 .setRequired(true)
-                .setMaxLength(1000)
+                .setMaxLength(700)
                 .build();
 
         return Modal.create(getId(), getModalTitle())

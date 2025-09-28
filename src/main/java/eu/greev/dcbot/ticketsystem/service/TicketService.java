@@ -117,7 +117,11 @@ public class TicketService {
             details.append("__").append(entry.getKey()).append("__\n").append(entry.getValue()).append("\n");
         }
 
-        builder.addField("Details", details.toString(), false);
+        String detailsValue = details.toString();
+        if (detailsValue.length() > 1024) {
+            detailsValue = detailsValue.substring(0, 1021) + "...";
+        }
+        builder.addField("Details", detailsValue, false);
 
         ticketChannel.sendMessage(owner.getAsMention() + " has created a new ticket").complete();
 

@@ -35,13 +35,13 @@ public class Report implements ICategory {
         TextInput reason = TextInput.create("reason", "Reason", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Why do you want to report this user?")
                 .setRequired(true)
-                .setMaxLength(1000)
+                .setMaxLength(700)
                 .build();
 
         TextInput evidence = TextInput.create("evidence", "Evidence", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Provide any evidence (links, screenshots, etc.) to support your report.")
                 .setRequired(true)
-                .setMaxLength(1000)
+                .setMaxLength(250)
                 .build();
 
         return Modal.create(getId(), getModalTitle())
