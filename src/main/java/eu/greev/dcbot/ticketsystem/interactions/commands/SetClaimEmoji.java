@@ -39,6 +39,17 @@ public class SetClaimEmoji extends AbstractCommand {
 
         Map<Long, String> emojis = config.getClaimEmojis();
 
+        if (emojis.containsValue(emoji) && !emoji.equals(emojis.get(event.getUser().getIdLong()))) {
+            event.replyEmbeds(new EmbedBuilder()
+                    .setAuthor(event.getUser().getName(), null, event.getUser().getEffectiveAvatarUrl())
+                    .setTitle("❌ **This emoji is already in use by another staff member**")
+                    .setColor(Color.RED)
+                    .setFooter(config.getServerName(), config.getServerLogo())
+                    .build()
+            ).setEphemeral(true).queue();
+            return;
+        }
+
         emojis.put(event.getUser().getIdLong(), emoji);
         config.setClaimEmojis(emojis);
         config.dumpConfig("./Tickets/config.yml");
