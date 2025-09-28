@@ -41,7 +41,7 @@ public class Creator implements ICategory {
         TextInput informationInput = TextInput.create("information", "Tell us more about yourself", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Additional information")
                 .setRequired(false)
-                .setMaxLength(1000)
+                .setMaxLength(700)
                 .build();
 
         return Modal.create(getId(), getModalTitle())

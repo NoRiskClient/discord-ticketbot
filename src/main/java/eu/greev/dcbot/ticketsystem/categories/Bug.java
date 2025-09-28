@@ -28,7 +28,7 @@ public class Bug implements  ICategory {
     public Modal getModal() {
         TextInput problemInput = TextInput.create("problem", "Problem", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Please provide as much information about your problem as possible.")
-                .setMaxLength(1000)
+                .setMaxLength(750)
                 .setRequired(true)
                 .build();
 
@@ -40,7 +40,7 @@ public class Bug implements  ICategory {
 
         TextInput logsInput = TextInput.create("logs", "Logs", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Provide logs/errors. Use mclo.gs link or upload file after ticket creation if too long.")
-                .setMaxLength(1000)
+                .setMaxLength(50)
                 .setRequired(false)
                 .build();
 

@@ -29,7 +29,7 @@ public class Security implements ICategory {
         TextInput vulnerability = TextInput.create("vulnerability", "Vulnerability", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Describe the security vulnerability you have discovered.")
                 .setRequired(true)
-                .setMaxLength(2000)
+                .setMaxLength(800)
                 .build();
 
         Modal modal = Modal.create(getId(), getModalTitle())

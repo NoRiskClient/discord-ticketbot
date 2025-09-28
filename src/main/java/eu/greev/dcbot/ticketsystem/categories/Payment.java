@@ -35,7 +35,7 @@ public class Payment implements ICategory {
         TextInput problemInput = TextInput.create("problem", "Problem", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Describe your payment issue in detail.")
                 .setRequired(true)
-                .setMaxLength(1000)
+                .setMaxLength(700)
                 .build();
 
         return Modal.create(getId(), getModalTitle())
