@@ -35,6 +35,10 @@ public class TicketService {
     private final Set<Ticket> allCurrentTickets = new HashSet<>();
     public static final String WAITING_EMOTE = "\uD83D\uDD50";
 
+    public TicketData getTicketData() {
+        return ticketData;
+    }
+
     public TicketService(JDA jda, Config config, Jdbi jdbi, TicketData ticketData) {
         this.jda = jda;
         this.config = config;
