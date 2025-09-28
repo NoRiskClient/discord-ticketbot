@@ -123,6 +123,7 @@ public class Main {
                         .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false))
                 .addSubcommands(new SubcommandData("set-claim-emoji", "Set your personal claim emoji")
                         .addOption(OptionType.STRING, "emoji", "The emoji you want to set", true))
+                .addSubcommands(new SubcommandData("list-claim-emojis", "List all claim emojis"))
                 .addSubcommandGroups(new SubcommandGroupData("thread", "Manages the ticket thread")
                         .addSubcommands(new SubcommandData("add", "Add a staff member to the ticket thread")
                                 .addOption(OptionType.USER, "staff", "Staff member to add", true))
@@ -170,6 +171,7 @@ public class Main {
         registerInteraction("tickets-backwards", new TicketsBackwards(ticketService));
 
         registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
+        registerInteraction("list-claim-emojis", new ListClaimEmojis(config, ticketService, missingPerm, jda));
 
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 
