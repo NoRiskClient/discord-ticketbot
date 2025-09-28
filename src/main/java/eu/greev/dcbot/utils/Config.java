@@ -28,6 +28,7 @@ public class Config {
     private List<Long> addToTicketThread;
     private Map<Long, String> claimEmojis = new HashMap<>();
     private Map<String, Long> categories = new HashMap<>();
+    private Map<String, List<Long>> categoryRoles = new HashMap<>();
 
     public void dumpConfig(String path) {
         DumperOptions options = new DumperOptions();

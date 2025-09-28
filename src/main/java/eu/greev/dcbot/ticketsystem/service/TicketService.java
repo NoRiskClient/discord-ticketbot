@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
+import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
@@ -92,11 +93,22 @@ public class TicketService {
                 .info(info)
                 .build();
 
-        TextChannel ticketChannel = guild.createTextChannel(generateChannelName(ticket), jda.getCategoryById(config.getUnclaimedCategory()))
+        ChannelAction<TextChannel> action = guild.createTextChannel(generateChannelName(ticket), jda.getCategoryById(config.getUnclaimedCategory()))
                 .addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY))
-                .addRolePermissionOverride(config.getStaffId(), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null)
-                .addMemberPermissionOverride(owner.getIdLong(), List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null)
-                .complete();
+                .addMemberPermissionOverride(owner.getIdLong(), List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null);
+
+        if (config.getCategoryRoles().get(ticket.getCategory().getId()) != null) {
+            for (Long id : config.getCategoryRoles().get(ticket.getCategory().getId())) {
+                Role role = guild.getRoleById(id);
+                if (role != null) {
+                    action.addRolePermissionOverride(role.getIdLong(), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null);
+                }
+            }
+        } else {
+            action.addRolePermissionOverride(config.getStaffId(), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null);
+        }
+
+        TextChannel ticketChannel = action.complete();
         ThreadChannel thread = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
 
         jdbi.withHandle(handle -> handle.createUpdate("INSERT INTO tickets(ticketID, channelID, threadID, category, info, owner) VALUES(?, ?, ?, ?, ?, ?)")
@@ -230,7 +242,16 @@ public class TicketService {
             ticket.getTextChannel().sendMessageEmbeds(error.build()).queue();
         }
 
-        ticket.getTextChannel().upsertPermissionOverride(jda.getRoleById(config.getStaffId())).setAllowed(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY).queue();
+        if (config.getCategories().get(ticket.getCategory().getId()) != null) {
+            for (Long id : config.getCategoryRoles().get(ticket.getCategory().getId())) {
+                Role role = ticket.getTextChannel().getGuild().getRoleById(id);
+                if (role != null) {
+                    ticket.getTextChannel().upsertPermissionOverride(role).setAllowed(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY).queue();
+                }
+            }
+        } else {
+            ticket.getTextChannel().upsertPermissionOverride(jda.getRoleById(config.getStaffId())).setAllowed(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY).queue();
+        }
 
         ticket.getTranscript().addLogMessage("[" + supporter.getName() + "] claimed the ticket.", Instant.now().getEpochSecond(), ticket.getId());
         ticket.getTextChannel().editMessageComponentsById(ticket.getBaseMessage())
