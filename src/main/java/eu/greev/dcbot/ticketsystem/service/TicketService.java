@@ -364,7 +364,7 @@ public class TicketService {
             name += config.getClaimEmojis().getOrDefault(ticket.getSupporter().getIdLong(), "✓") + "-";
         }
 
-        name += category + "-" + ticketId;
+        name += category + "-" + ticketId + "-" + ticket.getOwner().getName();
 
         return name;
     }
