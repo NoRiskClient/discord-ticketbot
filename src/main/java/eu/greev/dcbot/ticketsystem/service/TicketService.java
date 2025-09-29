@@ -242,7 +242,7 @@ public class TicketService {
             ticket.getTextChannel().sendMessageEmbeds(error.build()).queue();
         }
 
-        if (config.getCategories().get(ticket.getCategory().getId()) != null) {
+        if (config.getCategoryRoles().get(ticket.getCategory().getId()) != null) {
             for (Long id : config.getCategoryRoles().get(ticket.getCategory().getId())) {
                 Role role = ticket.getTextChannel().getGuild().getRoleById(id);
                 if (role != null) {
