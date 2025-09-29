@@ -239,7 +239,19 @@ public class TicketService {
         ticket.getThreadChannel().addThreadMember(supporter).queue();
 
         if (config.getCategories().get(ticket.getCategory().getId()) != null) {
-            ticket.getTextChannel().getManager().setParent(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId()))).queue();
+            ticket.getTextChannel().getManager().setParent(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId()))).queue(
+                    success -> {},
+                    error -> {
+                        if (error.getMessage().contains("CHANNEL_PARENT_MAX_CHANNELS")) {
+                            EmbedBuilder embedBuilder = new EmbedBuilder()
+                                    .setColor(Color.YELLOW)
+                                    .setDescription("❗**The channel category for this ticket category is full! Please try to close some tickets.**");
+                            ticket.getThreadChannel().sendMessageEmbeds(embedBuilder.build()).queue();
+                        } else {
+                            log.error("Couldn't move ticket channel to category!", error);
+                        }
+                    }
+            );
         } else {
             EmbedBuilder error = new EmbedBuilder()
                     .setColor(Color.YELLOW)
