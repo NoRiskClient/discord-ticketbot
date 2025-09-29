@@ -90,7 +90,7 @@ public class Main {
 
         TicketData ticketData = new TicketData(jda, jdbi);
         TicketService ticketService = new TicketService(jda, config, jdbi, ticketData);
-        jda.addEventListener(new TicketListener(ticketService, config));
+        jda.addEventListener(new TicketListener(ticketService, config, jda));
 
         registerCategory(new General(), config, ticketService, ticketData);
         registerCategory(new Report(), config, ticketService, ticketData);

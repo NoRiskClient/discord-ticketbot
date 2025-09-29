@@ -8,6 +8,7 @@ import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -43,6 +44,7 @@ import java.util.concurrent.ExecutionException;
 public class TicketListener extends ListenerAdapter {
     private final TicketService ticketService;
     private final Config config;
+    private final JDA jda;
 
     @Override
     public void onChannelUpdateArchived(ChannelUpdateArchivedEvent event) {
@@ -143,7 +145,7 @@ public class TicketListener extends ListenerAdapter {
             return;
         }
 
-        if (isValid(event) || event.getAuthor().isBot()) return;
+        if (isValid(event) || event.getAuthor().getIdLong() == jda.getSelfUser().getIdLong()) return;
 
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         if (ticket.isWaiting()) {
