@@ -127,17 +127,22 @@ public class TicketService {
                         """)
                 .setAuthor(owner.getName(), null, owner.getEffectiveAvatarUrl());
 
+        builder.addField("**Ticket ID**", "`%s`".formatted(String.valueOf(ticket.getId())), true);
+        builder.addField("**Category**", ticket.getCategory().getLabel(), true);
+        builder.addField("**Owner**", owner.getAsMention(), true);
+
         StringBuilder details = new StringBuilder();
 
         for (Map.Entry<String, String> entry : info.entrySet()) {
-            details.append("__").append(entry.getKey()).append("__\n").append(entry.getValue()).append("\n");
+            details.append("**").append(entry.getKey()).append("**\n").append(entry.getValue()).append("\n");
         }
 
         String detailsValue = details.toString();
         if (detailsValue.length() > 1024) {
             detailsValue = detailsValue.substring(0, 1021) + "...";
         }
-        builder.addField("Details", detailsValue, false);
+
+        builder.addField("**▬▬▬▬▬**", detailsValue, false);
 
         ticketChannel.sendMessage(owner.getAsMention() + " has created a new ticket").complete();
 
