@@ -69,7 +69,7 @@ public class HourlyScheduler {
                 EmbedBuilder builder = new EmbedBuilder()
                         .setTitle(String.format("⏰ Reminder: Waiting for your response (%s/%s)", ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
                         .setColor(Color.decode(config.getColor()))
-                        .appendDescription("**Our support team is waiting for you to respond**")
+                        .appendDescription("**Our support team is waiting for you to respond in %s**".formatted(ticket.getTextChannel()))
                         .appendDescription(String.format("\nIf you do not respond, the ticket will be automatically closed <t:%d:R>.",
                                 ticket.getWaitingSince()
                                         .plus(Duration.ofHours(AUTO_CLOSE_HOURS + 1))
