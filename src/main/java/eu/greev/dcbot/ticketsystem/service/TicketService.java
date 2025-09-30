@@ -226,6 +226,11 @@ public class TicketService {
                 log.warn("Couldn't send [{}] their transcript since an error occurred:\nMeaning:{} | Message:{} | Response:{}", ticket.getOwner().getName(), e.getMeaning(), e.getMessage(), e.getErrorResponse());
             }
         }
+
+        if (config.getLogChannel() != 0) {
+            jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel()).sendMessageEmbeds(builder.build()).setFiles(FileUpload.fromData(transcript.toFile(ticketId))).queue();
+        }
+
         saveTranscriptChanges(ticket.getTranscript().getRecentChanges());
         ticket.getTextChannel().delete().queue();
     }

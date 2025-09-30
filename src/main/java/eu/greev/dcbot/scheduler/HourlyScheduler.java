@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @AllArgsConstructor
@@ -46,6 +47,9 @@ public class HourlyScheduler {
         log.info("Running hourly ticket check...");
 
         List<Integer> ticketsIds = ticketData.getOpenTicketsIds();
+        int userReminders = 0;
+        int autoClosures = 0;
+        AtomicInteger supporterReminders = new AtomicInteger(0);
 
         for (Integer ticketId : ticketsIds) {
             log.debug("Checking ticket ID: {}", ticketId);
@@ -65,6 +69,7 @@ public class HourlyScheduler {
 
             if (shouldClose) {
                 ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Automatic close due to inactivity");
+                autoClosures++;
             } else if (shouldRemind) {
                 EmbedBuilder builder = new EmbedBuilder()
                         .setTitle(String.format("⏰ Reminder: Waiting for your response (%s/%s)", ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
@@ -100,6 +105,7 @@ public class HourlyScheduler {
                 ticket.getThreadChannel().sendMessageEmbeds(threadMessageBuilder.build()).queue();
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
+                userReminders++;
             } else {
                 if (ticket.getTextChannel() == null || ticket.getThreadChannel() == null) {
                     log.warn("Skipping supporter reminder for ticket {} because channel or thread is null", ticket.getId());
@@ -122,6 +128,7 @@ public class HourlyScheduler {
                                                         .queue();
 
                                                 ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
+                                                supporterReminders.incrementAndGet();
                                             }
                                         }, failure -> {
                                             if (failure instanceof ErrorResponseException ere) {
@@ -140,6 +147,32 @@ public class HourlyScheduler {
                 TimeUnit.SECONDS.sleep(10L);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
+            }
+        }
+
+        sendProcessingSummary(userReminders, supporterReminders.get(), autoClosures, ticketsIds.size());
+    }
+
+    private void sendProcessingSummary(int userReminders, int supporterReminders, int autoClosures, int totalTickets) {
+        if (config.getLogChannel() != 0 && (userReminders != 0 || supporterReminders != 0 || autoClosures != 0)) {
+            EmbedBuilder summaryBuilder = new EmbedBuilder()
+                    .setTitle("📊 Hourly Ticket Processing Summary")
+                    .setColor(Color.decode(config.getColor()))
+                    .addField("Total Tickets Processed", "`" + totalTickets + "`", false)
+                    .addField("User Reminders Sent", "`" + userReminders + "`", false)
+                    .addField("Supporter Reminders Sent", "`" + supporterReminders + "`", false)
+                    .addField("Auto-Closures", "`" + autoClosures + "`", false)
+                    .setFooter(config.getServerName(), config.getServerLogo());
+
+            try {
+                jda.getTextChannelById(config.getLogChannel())
+                        .sendMessageEmbeds(summaryBuilder.build())
+                        .queue(
+                            success -> log.info("Processing summary sent to log channel"),
+                            failure -> log.error("Failed to send processing summary to log channel: {}", failure.getMessage())
+                        );
+            } catch (Exception e) {
+                log.error("Error sending processing summary: {}", e.getMessage());
             }
         }
     }

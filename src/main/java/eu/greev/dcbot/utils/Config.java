@@ -20,6 +20,7 @@ public class Config {
     private long staffId;
     private long unclaimedCategory;
     private long baseChannel;
+    private long logChannel = 0;
     private String serverLogo;
     private String serverName;
     private String color;
