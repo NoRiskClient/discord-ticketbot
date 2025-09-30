@@ -81,7 +81,8 @@ public class HourlyScheduler {
                         .setFooter(config.getServerName(), config.getServerLogo());
 
                 EmbedBuilder threadMessageBuilder = new EmbedBuilder()
-                        .setTitle("The reminder was sent to %s (%s/%s)".formatted(ticket.getOwner().getAsMention(), ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
+                        .setTitle("Reminder Sent")
+                        .setDescription("The reminder was sent to %s (%s/%s)".formatted(ticket.getOwner().getAsMention(), ticket.getRemindersSent() + 1, AUTO_CLOSE_HOURS / REMIND_INTERVAL_HOURS - 1))
                         .setColor(Color.decode(config.getColor()))
                         .setFooter(config.getServerName(), config.getServerLogo());
 
