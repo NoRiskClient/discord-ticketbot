@@ -154,6 +154,23 @@ public class TicketListener extends ListenerAdapter {
             ticket.setRemindersSent(0);
         }
 
+        if (ticket.getSupporter() == null) {
+            for (Member member : event.getMessage().getMentions().getMembers()) {
+                if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
+                    event.getMessage().delete().queue();
+
+                    EmbedBuilder builder = new EmbedBuilder()
+                            .setColor(Color.RED)
+                            .setTitle("Please do not ping staff members!")
+                            .setDescription("\uD83C\uDDEC\uD83C\uDDE7 A member of our staff will assist you shortly, thank you for your patience.\n\n\uD83C\uDDE9\uD83C\uDDEA Ein Teammitglied wird sich in Kürze um dein Ticket kümmern, vielen Dank für deine Geduld.")
+                            .setFooter(config.getServerName(), config.getServerLogo());
+
+                    event.getChannel().sendMessageEmbeds(builder.build()).queue();
+                    break;
+                }
+            }
+        }
+
         ticket.setSupporterRemindersSent(0);
 
         ticket.getTranscript().addMessage(event.getMessage(), ticket.getId());
