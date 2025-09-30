@@ -393,7 +393,7 @@ public class TicketService {
         changes.clear();
     }
 
-    private String generateChannelName(Ticket ticket) {
+    public String generateChannelName(Ticket ticket) {
         String category = ticket.getCategory().getId();
         int ticketId = ticket.getId();
 

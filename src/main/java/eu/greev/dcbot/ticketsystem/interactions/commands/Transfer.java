@@ -58,6 +58,7 @@ public class Transfer extends AbstractCommand {
         Member sup = event.getOption("staff").getAsMember();
         if (sup.getRoles().contains(jda.getRoleById(config.getStaffId())) || !sup.getUser().equals(ticket.getSupporter())) {
             ticket.setSupporter(sup.getUser());
+            ticket.getTextChannel().getManager().setName(ticketService.generateChannelName(ticket)).queue();
             EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                     .setColor(Color.decode(config.getColor()))
                     .setAuthor(event.getUser().getName(), null, event.getUser().getEffectiveAvatarUrl())
