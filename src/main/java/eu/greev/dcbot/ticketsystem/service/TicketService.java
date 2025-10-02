@@ -125,11 +125,12 @@ public class TicketService {
                         A member of staff will assist you shortly.
                         In the meantime, please describe your issue in as much detail as possible! :)
                         """)
+                .addField("**Ticket ID**", "`%s`".formatted(String.valueOf(ticket.getId())), true)
+                .addField("**Category**", ticket.getCategory().getLabel(), true)
+                .addField("**Owner**", owner.getAsMention(), true)
+                .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
                 .setAuthor(owner.getName(), null, owner.getEffectiveAvatarUrl());
 
-        builder.addField("**Ticket ID**", "`%s`".formatted(String.valueOf(ticket.getId())), true);
-        builder.addField("**Category**", ticket.getCategory().getLabel(), true);
-        builder.addField("**Owner**", owner.getAsMention(), true);
 
         StringBuilder details = new StringBuilder();
 
