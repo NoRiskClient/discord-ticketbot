@@ -245,8 +245,22 @@ public class TicketService {
         ticket.getThreadChannel().addThreadMember(supporter).queue();
 
         if (config.getCategories().get(ticket.getCategory().getId()) != null) {
-            ticket.getTextChannel().getManager().setParent(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId()))).queue(
-                    success -> {},
+            ticket.getTextChannel().getManager().setParent(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId()))).delay(500, TimeUnit.MILLISECONDS).queue(
+                    success -> jda.getGuildById(config.getServerId()).modifyTextChannelPositions(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId())))
+                            .sortOrder(
+                                    (o1, o2) -> {
+                                        Ticket t1 = getTicketByChannelId(o1.getIdLong());
+                                        Ticket t2 = getTicketByChannelId(o2.getIdLong());
+
+                                        if (t1 == null || t2 == null) {
+                                            return 0;
+                                        } else {
+                                            int result = Long.compare(t1.getSupporter().getIdLong(), t2.getSupporter().getIdLong());
+
+                                            return  result != 0 ? result : Long.compare(t1.getId(), t2.getId());
+                                        }
+                                    }
+                            ).queue(),
                     error -> {
                         if (error.getMessage().contains("CHANNEL_PARENT_MAX_CHANNELS")) {
                             EmbedBuilder embedBuilder = new EmbedBuilder()
