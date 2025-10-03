@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Slf4j
-@Builder
+@Builder(toBuilder = true)
 public class Ticket {
     @Getter private User owner;
     @Getter private User supporter;
@@ -34,7 +34,7 @@ public class Ticket {
     @Getter @Setter String tempMsgId;
     @Getter @Setter Transcript transcript;
     @Getter private String baseMessage;
-    @Getter private final int id;
+    @Getter private int id;
     @Getter private TextChannel textChannel;
     @Getter private ThreadChannel threadChannel;
     @Getter private boolean isOpen;

@@ -74,17 +74,7 @@ public class TicketService {
             return Optional.of("You have reached the maximum number of open tickets (" + config.getMaxTicketsPerUser() + "). Please close an existing ticket before opening a new one.");
         }
 
-        String infoJson;
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            infoJson = mapper.writeValueAsString(info);
-        } catch (JsonProcessingException e) {
-            log.error("Couldn't parse ticket info map to json string! {}", e.getMessage());
-            return Optional.of("An internal error occurred while creating your ticket. Please contact a developer.");
-        }
-
         Ticket ticket = Ticket.builder()
-                .id(ticketData.getLastTicketId() + 1)
                 .ticketData(ticketData)
                 .transcript(new Transcript(new ArrayList<>()))
                 .owner(owner)
@@ -92,6 +82,10 @@ public class TicketService {
                 .category(category)
                 .info(info)
                 .build();
+
+        // Create DB record and get generated ticket ID before creating channels
+        int newId = ticketData.saveTicket(ticket);
+        ticket = ticket.toBuilder().id(newId).build();
 
         ChannelAction<TextChannel> action = guild.createTextChannel(generateChannelName(ticket), jda.getCategoryById(config.getUnclaimedCategory()))
                 .addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY))
@@ -110,15 +104,6 @@ public class TicketService {
 
         TextChannel ticketChannel = action.complete();
         ThreadChannel thread = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
-
-        jdbi.withHandle(handle -> handle.createUpdate("INSERT INTO tickets(ticketID, channelID, threadID, category, info, owner) VALUES(?, ?, ?, ?, ?, ?)")
-                .bind(0, ticket.getId())
-                .bind(1, ticketChannel.getId())
-                .bind(2, thread.getId())
-                .bind(3, ticket.getCategory().getId())
-                .bind(4, infoJson)
-                .bind(5, owner.getId())
-                .execute());
 
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.decode(config.getColor()))
                 .setDescription("Hello there, " + owner.getAsMention() + "! " + """
@@ -164,13 +149,14 @@ public class TicketService {
                         This message will delete itself after this minute.
                         """);
 
+        Ticket finalTicket = ticket;
         ticketChannel.sendMessageEmbeds(builder1.build())
                 .setActionRow(Button.danger("nevermind", "Nevermind!"))
                 .queue(suc -> {
                     suc.delete().queueAfter(1, TimeUnit.MINUTES, msg -> {
                     }, err -> {
                     });
-                    ticket.setTempMsgId(suc.getId());
+                    finalTicket.setTempMsgId(suc.getId());
                 });
 
         config.getAddToTicketThread().forEach(id -> {
