@@ -9,7 +9,10 @@ import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 import java.awt.*;
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Stats extends AbstractCommand {
     public Stats(Config config, TicketService ticketService, EmbedBuilder missingPerm, JDA jda) {
@@ -31,7 +34,7 @@ public class Stats extends AbstractCommand {
 
         Map<String, Integer> topClosers = data.topClosers(5);
         Map<String, Integer> topSupporters = data.topSupporters(10);
-        Map<String, Long> nextTicketsForClosing = data.nextTicketsForClosing(3);
+        Map<String, String> nextTicketsForClosing = data.nextTicketsForClosing(3);
 
         EmbedBuilder builder = new EmbedBuilder()
                 .setColor(Color.decode(config.getColor()))
@@ -47,34 +50,24 @@ public class Stats extends AbstractCommand {
 
         if (!topSupporters.isEmpty()) {
             String nameFromUserId = getNameListFromUserId(topSupporters);
-            builder.addField("Users with most open tickets", nameFromUserId, false);
+            builder.addField("Helpers with most open tickets", nameFromUserId, false);
         }
 
         if (!nextTicketsForClosing.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            for (Map.Entry<String, Long> e : nextTicketsForClosing.entrySet()) {
-                String channelId = e.getKey();
-                Long time = e.getValue();
-                sb.append("• ").append(channelId).append(": ").append("<t:").append(time).append(":R>").append("\n");
-            }
-            builder.addField("Longest waiting tickets", sb.toString(), false);
+            String longestWaiting = nextTicketsForClosing.entrySet().stream()
+                    .map(e -> "• <#%s>: <t:%d:R>".formatted(e.getKey(), Instant.parse(e.getValue()).getEpochSecond()))
+                    .collect(Collectors.joining("\n"));
+            builder.addField("Longest waiting tickets", longestWaiting, false);
         }
 
         event.replyEmbeds(builder.build()).setEphemeral(true).queue();
     }
 
     private String getNameListFromUserId(Map<String, Integer> topClosers) {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Integer> e : topClosers.entrySet()) {
-            String userId = e.getKey();
-            Integer count = e.getValue();
-            String name = userId;
-            User u = jda.retrieveUserById(userId).complete();
-            if (u != null) {
-                name = u.getName();
-            }
-            sb.append("• ").append(name).append(": ").append(count).append("\n");
-        }
-        return sb.toString();
+        return topClosers.entrySet().stream()
+                .map(e -> Map.entry(Optional.ofNullable(jda.retrieveUserById(e.getKey()).complete()), e.getValue()))
+                .filter(e -> e.getKey().isPresent())
+                .map(e -> "• %s: %d".formatted(e.getKey().get().getAsMention(), e.getValue()))
+                .collect(Collectors.joining("\n"));
     }
 }

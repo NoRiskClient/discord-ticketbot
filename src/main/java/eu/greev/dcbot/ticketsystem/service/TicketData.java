@@ -185,11 +185,11 @@ public class TicketData {
                 }));
     }
 
-    public Map<String, Long> nextTicketsForClosing(int limit) {
+    public Map<String, String> nextTicketsForClosing(int limit) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT channelID, waitingSince FROM tickets WHERE isOpen = true AND waitingSince != '' ORDER BY waitingSince ASC LIMIT :limit")
                 .bind("limit", limit)
                 .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
-                    map.put(row.getColumn("channelID", String.class), row.getColumn("waitingSince", Long.class));
+                    map.put(row.getColumn("channelID", String.class), row.getColumn("waitingSince", String.class));
                     return map;
                 }));
     }
