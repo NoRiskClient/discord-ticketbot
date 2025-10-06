@@ -119,27 +119,52 @@ public class TicketData {
                 .orElse(0));
     }
 
-    public void saveTicket(Ticket ticket) {
+    public int saveTicket(Ticket ticket) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            jdbi.withHandle(handle -> handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=?, closeMessage=? WHERE ticketID =?")
-                    .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
-                    .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
-                    .bind(2, ticket.getCategory().getId())
-                    .bind(3, mapper.writeValueAsString(ticket.getInfo()))
-                    .bind(4, ticket.isWaiting())
-                    .bind(5, ticket.getOwner().getId())
-                    .bind(6, ticket.getSupporter() != null ? ticket.getSupporter().getId() : "")
-                    .bind(7, ticket.getInvolved()  == null || ticket.getInvolved().isEmpty() ?
-                            "" : ticket.getInvolved().toString().replace("[", "").replace("]", ""))
-                    .bind(8, ticket.getBaseMessage())
-                    .bind(9, ticket.isOpen())
-                    .bind(10, ticket.getWaitingSince() == null ? null : ticket.getWaitingSince().toString())
-                    .bind(11, ticket.getRemindersSent())
-                    .bind(12, ticket.getSupporterRemindersSent())
-                    .bind(13, ticket.getCloseMessage())
-                    .bind(14, ticket.getId())
-                    .execute());
+            return jdbi.withHandle(handle -> {
+                // If no ticketID (0), INSERT and return generated key; otherwise UPDATE and return existing id
+                if (ticket.getId() == 0) {
+                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, supporterRemindersSent, closeMessage, closer) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    update
+                            .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
+                            .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
+                            .bind(2, ticket.getCategory().getId())
+                            .bind(3, mapper.writeValueAsString(ticket.getInfo()))
+                            .bind(4, ticket.isWaiting())
+                            .bind(5, ticket.getOwner().getId())
+                            .bind(6, ticket.getSupporter() != null ? ticket.getSupporter().getId() : "")
+                            .bind(7, ticket.getInvolved() == null || ticket.getInvolved().isEmpty() ? "" : ticket.getInvolved().toString().replace("[", "").replace("]", ""))
+                            .bind(8, ticket.getBaseMessage() == null ? "" : ticket.getBaseMessage())
+                            .bind(9, ticket.isOpen())
+                            .bind(10, ticket.getWaitingSince() == null ? null : ticket.getWaitingSince().toString())
+                            .bind(11, ticket.getRemindersSent())
+                            .bind(12, ticket.getSupporterRemindersSent())
+                            .bind(13, ticket.getCloseMessage())
+                            .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "");
+                    return update.executeAndReturnGeneratedKeys("ticketID").mapTo(Integer.class).one();
+                } else {
+                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=?, closeMessage=?, closer=? WHERE ticketID =?")
+                            .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
+                            .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
+                            .bind(2, ticket.getCategory().getId())
+                            .bind(3, mapper.writeValueAsString(ticket.getInfo()))
+                            .bind(4, ticket.isWaiting())
+                            .bind(5, ticket.getOwner().getId())
+                            .bind(6, ticket.getSupporter() != null ? ticket.getSupporter().getId() : "")
+                            .bind(7, ticket.getInvolved() == null || ticket.getInvolved().isEmpty() ? "" : ticket.getInvolved().toString().replace("[", "").replace("]", ""))
+                            .bind(8, ticket.getBaseMessage() == null ? "" : ticket.getBaseMessage())
+                            .bind(9, ticket.isOpen())
+                            .bind(10, ticket.getWaitingSince() == null ? null : ticket.getWaitingSince().toString())
+                            .bind(11, ticket.getRemindersSent())
+                            .bind(12, ticket.getSupporterRemindersSent())
+                            .bind(13, ticket.getCloseMessage())
+                            .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
+                            .bind(15, ticket.getId())
+                            .execute();
+                    return ticket.getId();
+                }
+            });
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
