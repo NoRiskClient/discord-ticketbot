@@ -13,6 +13,7 @@ import org.jdbi.v3.core.Jdbi;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class TicketData {
     private final JDA jda;
@@ -37,7 +38,7 @@ public class TicketData {
 
                     ObjectMapper mapper = new ObjectMapper();
 
-                    Ticket.TicketBuilder ticketBuilder = null;
+                    Ticket.TicketBuilder ticketBuilder;
                     try {
                         ticketBuilder = Ticket.builder()
                                 .ticketData(this)
@@ -166,20 +167,29 @@ public class TicketData {
                 .orElse(0));
     }
 
-    public java.util.LinkedHashMap<String, Integer> topClosers(int limit) {
+    public Map<String, Integer> topClosers(int limit) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT closer, COUNT(*) as c FROM tickets WHERE isOpen = false AND closer != '' GROUP BY closer ORDER BY c DESC LIMIT :limit")
                 .bind("limit", limit)
-                .reduceRows(new java.util.LinkedHashMap<String, Integer>(), (map, row) -> {
+                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("closer", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));
     }
 
-    public java.util.LinkedHashMap<String, Integer> topOwnersWithOpenTickets(int limit) {
-        return jdbi.withHandle(handle -> handle.createQuery("SELECT owner, COUNT(*) as c FROM tickets WHERE isOpen = true AND owner != '' GROUP BY owner ORDER BY c DESC LIMIT :limit")
+    public Map<String, Integer> topSupporters(int limit) {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = true AND supporter != '' GROUP BY supporter ORDER BY c DESC LIMIT :limit")
                 .bind("limit", limit)
-                .reduceRows(new java.util.LinkedHashMap<String, Integer>(), (map, row) -> {
-                    map.put(row.getColumn("owner", String.class), row.getColumn("c", Integer.class));
+                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                    map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
+                    return map;
+                }));
+    }
+
+    public Map<String, String> nextTicketsForClosing(int limit) {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT channelID, waitingSince FROM tickets WHERE isOpen = true AND waitingSince != '' ORDER BY waitingSince ASC LIMIT :limit")
+                .bind("limit", limit)
+                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                    map.put(row.getColumn("channelID", String.class), row.getColumn("waitingSince", String.class));
                     return map;
                 }));
     }
