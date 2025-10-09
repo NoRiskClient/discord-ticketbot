@@ -186,7 +186,7 @@ public class TicketData {
     }
 
     public int countWaitingTickets() {
-        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isWaiting = true")
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isWaiting = true AND isOpen = true")
                 .mapTo(Integer.class)
                 .findOne()
                 .orElse(0));
