@@ -6,7 +6,7 @@ import lombok.Data;
 public class ScrollEntity {
     private final long handlerId;
     private final long userId;
-    private int currentPage = 1;
+    private int currentPage;
     private final int maxPage;
     private final long timeCreated;
 }

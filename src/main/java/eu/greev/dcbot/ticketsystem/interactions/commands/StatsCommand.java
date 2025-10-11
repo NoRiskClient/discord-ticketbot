@@ -1,12 +1,12 @@
 package eu.greev.dcbot.ticketsystem.interactions.commands;
 
+import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.time.Instant;
@@ -14,19 +14,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class Stats extends AbstractCommand {
-    public Stats(Config config, TicketService ticketService, EmbedBuilder missingPerm, JDA jda) {
-        super(config, ticketService, missingPerm, jda);
+public class StatsCommand extends Interaction {
+    public StatsCommand(@NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
+        super(config, ticketService, jda);
+        this.ticketChannelRequired = false;
+        addCommand("Show general ticket statistics");
     }
 
     @Override
-    public void execute(Event evt) {
-        SlashCommandInteractionEvent event = (SlashCommandInteractionEvent) evt;
-        if (!event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
-            event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
-            return;
-        }
+    public String getIdentifier() {
+        return "stats";
+    }
 
+    @Override
+    public void handleSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         var data = ticketService.getTicketData();
         int total = data.countTotalTickets();
         int open = data.countOpenTickets();

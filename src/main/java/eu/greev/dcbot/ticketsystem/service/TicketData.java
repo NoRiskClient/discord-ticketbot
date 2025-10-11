@@ -3,7 +3,8 @@ package eu.greev.dcbot.ticketsystem.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.greev.dcbot.Main;
+import eu.greev.dcbot.ticketsystem.categories.TicketCategory;
+import eu.greev.dcbot.ticketsystem.entities.DBTicket;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import lombok.Getter;
 import net.dv8tion.jda.api.JDA;
@@ -12,6 +13,7 @@ import org.jdbi.v3.core.Jdbi;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +26,14 @@ public class TicketData {
         this.jda = jda;
         this.jdbi = jdbi;
         this.transcriptData = new TranscriptData(jdbi);
+    }
+
+    protected List<Ticket> loadAllTickets() {
+        List<DBTicket> tickets = jdbi.withHandle(handle ->
+                handle.createQuery("SELECT * FROM tickets")
+                        .mapTo(DBTicket.class)
+                        .list());
+
     }
 
     protected Ticket loadTicket(int ticketID) {
@@ -47,7 +57,7 @@ public class TicketData {
                                 .threadChannel(!resultSet.getString("threadID").equals(Strings.EMPTY)
                                         ? jda.getThreadChannelById(resultSet.getString("threadID")) : null)
                                 .owner(jda.retrieveUserById(resultSet.getString("owner")).complete())
-                                .category(Main.CATEGORIES.stream().filter(c -> c.getId().equals(category)).findFirst().orElse(null))
+                                .category(Arrays.stream(TicketCategory.values()).filter(c -> c.getId().equals(category)).findFirst().orElse(null))
                                 .info(mapper.readValue(resultSet.getString("info"), new TypeReference<>() {}))
                                 .isOpen(resultSet.getBoolean("isOpen"))
                                 .isWaiting(resultSet.getBoolean("isWaiting"))

@@ -1,8 +1,6 @@
 package eu.greev.dcbot.ticketsystem.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.greev.dcbot.ticketsystem.categories.ICategory;
+import eu.greev.dcbot.ticketsystem.categories.TicketCategory;
 import eu.greev.dcbot.ticketsystem.entities.Edit;
 import eu.greev.dcbot.ticketsystem.entities.Message;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
@@ -13,6 +11,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
@@ -22,6 +21,8 @@ import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 import java.time.Instant;
@@ -60,7 +61,7 @@ public class TicketService {
         }, 0, TimeUnit.MINUTES.toMillis(3));
     }
 
-    public Optional<String> createNewTicket(Map<String, String> info, ICategory category, User owner) {
+    public Optional<String> createNewTicket(Map<String, String> info, TicketCategory category, User owner) {
         Guild guild = jda.getGuildById(config.getServerId());
         int openTickets = 0;
         for (TextChannel textChannel : guild.getTextChannels()) {
@@ -173,10 +174,10 @@ public class TicketService {
         return Optional.empty();
     }
 
-    public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message) {
+    public void closeTicket(Ticket ticket, boolean wasAccident, User closer, @Nullable String message) {
         Transcript transcript = ticket.getTranscript();
         int ticketId = ticket.getId();
-        ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message);
+        ticket.setCloser(closer).setOpen(false).setCloseMessage(message);
         if (wasAccident) {
             ticket.getTextChannel().delete().queue();
             jdbi.withHandle(handle -> handle.createUpdate("DELETE FROM tickets WHERE ticketID=?").bind(0, ticketId).execute());
@@ -191,7 +192,7 @@ public class TicketService {
                 .bind(1, ticketId)
                 .execute());
 
-        transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getUser().getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
+        transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
 
         EmbedBuilder builder = new EmbedBuilder().setTitle("Ticket " + ticketId)
                 .addField("Closed by", closer.getAsMention(), false);
@@ -340,6 +341,15 @@ public class TicketService {
             }
             return loadedTicket;
         });
+    }
+
+    public @Nullable Ticket getTicketByChannel(@Nullable Channel channel) {
+        return channel == null ? null : getTicketByChannelId(channel.getIdLong());
+    }
+
+    public boolean isTicketChannel(@NotNull Channel channel) {
+        final Channel finalChannel = channel instanceof ThreadChannel thread ? thread.getParentChannel() : channel;
+        return allCurrentTickets.stream().anyMatch(t -> t.getThreadChannel().equals(finalChannel));
     }
 
     public Ticket getTicketByTicketId(int ticketID) {

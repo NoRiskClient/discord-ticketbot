@@ -1,41 +1,47 @@
 package eu.greev.dcbot.ticketsystem.interactions.commands;
 
-import eu.greev.dcbot.Main;
-import eu.greev.dcbot.ticketsystem.categories.ICategory;
+import eu.greev.dcbot.ticketsystem.categories.TicketCategory;
+import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 @Slf4j
-public class Setup extends AbstractCommand {
-
-    public Setup(Config config, TicketService ticketService, EmbedBuilder missingPerm, JDA jda) {
-        super(config, ticketService, missingPerm, jda);
+public class SetupCommand extends Interaction {
+    public SetupCommand(@NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
+        super(config, ticketService, jda);
+        this.ticketChannelRequired = false;
+        this.administratorRequired = true;
+        addCommand("Setup the System", d -> d
+                .addOption(OptionType.CHANNEL, "base-channel", "The channel where the ticket select menu should be", true)
+                .addOption(OptionType.CHANNEL, "unclaimed-category", "The category where the tickets should create", true)
+                .addOption(OptionType.ROLE, "staff", "The role which is the team role", true)
+                .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false));
     }
 
     @Override
-    public void execute(Event evt) {
-        SlashCommandInteractionEvent event = (SlashCommandInteractionEvent) evt;
+    public String getIdentifier() {
+        return "setup";
+    }
+
+    @Override
+    public void handleSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         Member member = event.getMember();
-        if (!member.getPermissions().contains(Permission.ADMINISTRATOR)) {
-            event.replyEmbeds(missingPerm.setAuthor(event.getUser().getName(), null, event.getUser().getEffectiveAvatarUrl()).build()).setEphemeral(true).queue();
-            return;
-        }
         String serverName = event.getGuild().getName();
         String serverLogo = event.getGuild().getIconUrl();
         long serverId = event.getGuild().getIdLong();
@@ -88,8 +94,6 @@ public class Setup extends AbstractCommand {
         config.setStaffId(staffId);
         config.setAddToTicketThread(new ArrayList<>());
 
-        config.dumpConfig("./Tickets/config.yml");
-
         try {
             event.getGuild().getTextChannelById(config.getBaseChannel()).getIterableHistory()
                     .takeAsync(1000)
@@ -110,8 +114,8 @@ public class Setup extends AbstractCommand {
         StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
                 .setPlaceholder("Select your ticket topic");
 
-        for (ICategory category : Main.CATEGORIES) {
-            selectionBuilder.addOption(category.getLabel(), "select-" + category.getId(), category.getDescription());
+        for (TicketCategory category : TicketCategory.values()) {
+            selectionBuilder.addOption(category.getLabel(), "select-category " + category.getId(), category.getDescription());
         }
 
         baseChannel.sendMessageEmbeds(builder.build())

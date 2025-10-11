@@ -4,6 +4,7 @@ import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
+import eu.greev.dcbot.utils.CustomEmbedBuilder;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -11,7 +12,10 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 
 import java.awt.*;
-import java.time.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -23,6 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @AllArgsConstructor
 public class HourlyScheduler {
+    private static final CustomEmbedBuilder REMINDER = new CustomEmbedBuilder()
+            .setTitle("⏰ Reminder: Waiting for your response (%CURRENT_HOURS/%MAX_HOURS)");
+
     private static final int REMIND_INTERVAL_HOURS = 24;
     private static final int REMIND_SUPPORTER_HOURS = 24;
     private static final int AUTO_CLOSE_HOURS = 96;
@@ -68,7 +75,7 @@ public class HourlyScheduler {
             AtomicBoolean shouldRemindSupporter = new AtomicBoolean(false);
 
             if (shouldClose) {
-                ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Automatic close due to inactivity");
+                ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember().getUser(), "Automatic close due to inactivity");
                 autoClosures++;
             } else if (shouldRemind) {
                 EmbedBuilder builder = new EmbedBuilder()

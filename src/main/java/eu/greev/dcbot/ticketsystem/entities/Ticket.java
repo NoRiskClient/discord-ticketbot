@@ -1,6 +1,6 @@
 package eu.greev.dcbot.ticketsystem.entities;
 
-import eu.greev.dcbot.ticketsystem.categories.ICategory;
+import eu.greev.dcbot.ticketsystem.categories.TicketCategory;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.Transcript;
 import lombok.Builder;
@@ -23,7 +23,7 @@ public class Ticket {
     @Getter private User owner;
     @Getter private User supporter;
     @Getter private User closer;
-    @Getter private ICategory category;
+    @Getter private TicketCategory category;
     @Getter private Map<String, String> info;
     @Getter @Builder.Default private ArrayList<String> involved = new ArrayList<>();
     @Getter boolean isWaiting;

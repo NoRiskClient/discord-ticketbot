@@ -1,42 +1,34 @@
 package eu.greev.dcbot.ticketsystem.interactions.commands;
 
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.time.Instant;
 
-public class Transfer extends AbstractCommand {
-    private final EmbedBuilder wrongChannel;
-
-    public Transfer(Config config, TicketService ticketService, EmbedBuilder missingPerm, EmbedBuilder wrongChannel, JDA jda) {
-        super(config, ticketService, missingPerm, jda);
-        this.wrongChannel = wrongChannel;
+public class TransferCommand extends Interaction {
+    public TransferCommand(@NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
+        super(config, ticketService, jda);
+        addCommand("Sets the new supporter",
+                d -> d.addOption(OptionType.USER, "staff", "The staff member who should be the supporter", true));
     }
 
     @Override
-    public void execute(Event evt) {
-        SlashCommandInteractionEvent event = (SlashCommandInteractionEvent) evt;
-        if (!event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
-            event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
-            return;
-        }
-        if (ticketService.getTicketByChannelId(event.getChannel().getIdLong()) == null) {
-            event.replyEmbeds(wrongChannel
-                            .setFooter(config.getServerName(), config.getServerLogo())
-                            .setAuthor(event.getUser().getName(), null, event.getUser().getEffectiveAvatarUrl())
-                            .build())
-                    .setEphemeral(true)
-                    .queue();
-            return;
-        }
+    public String getIdentifier() {
+        return "transfer";
+    }
+
+    @Override
+    public void handleSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         EmbedBuilder error = new EmbedBuilder()
                 .setColor(Color.RED)
@@ -68,6 +60,7 @@ public class Transfer extends AbstractCommand {
             event.replyEmbeds(builder.build()).queue();
             return;
         }
+
         event.replyEmbeds(new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                 .setColor(Color.RED)
                 .addField("❌ **Setting new supporter failed**", "This member is either already the supporter or not a staff member", false).build()).setEphemeral(true).queue();

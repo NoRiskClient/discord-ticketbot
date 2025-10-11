@@ -1,7 +1,7 @@
 package eu.greev.dcbot.ticketsystem;
 
 import eu.greev.dcbot.Main;
-import eu.greev.dcbot.ticketsystem.categories.ICategory;
+import eu.greev.dcbot.ticketsystem.categories.TicketCategory;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
@@ -103,24 +103,24 @@ public class TicketListener extends ListenerAdapter {
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         if (event.getButton().getId() == null) return;
-        Main.INTERACTIONS.get(event.getButton().getId()).execute(event);
+        Main.handleInteraction(event.getButton().getId(), event);
     }
 
     @Override
     public void onModalInteraction(ModalInteractionEvent event) {
-        Main.INTERACTIONS.get(event.getModalId()).execute(event);
+        Main.handleInteraction(event.getModalId(), event);
     }
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
         if (event.getSelectMenu().getId() == null || !event.getSelectMenu().getId().equals("ticket-create-topic")) return;
-        Main.INTERACTIONS.get(event.getSelectedOptions().get(0).getValue()).execute(event);
+        Main.handleInteraction(event.getSelectedOptions().getFirst().getValue(), event);
     }
 
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         if (!event.getName().equals("ticket") || !isValidSlashEvent(event)) return;
-        Main.INTERACTIONS.get((event.getSubcommandGroup() == null ? "" : event.getSubcommandGroup() + " ") + event.getSubcommandName()).execute(event);
+        Main.handleInteraction((event.getSubcommandGroup() == null ? "" : event.getSubcommandGroup() + " ") + event.getSubcommandName(), event);
     }
 
     /*
@@ -199,7 +199,6 @@ public class TicketListener extends ListenerAdapter {
     @Override
     public void onGuildUpdateIcon(GuildUpdateIconEvent event) {
         config.setServerLogo(event.getNewIconUrl());
-        config.dumpConfig("./Tickets/config.yml");
         try {
             event.getGuild().getTextChannelById(config.getBaseChannel()).getIterableHistory()
                     .takeAsync(1000)
@@ -216,8 +215,8 @@ public class TicketListener extends ListenerAdapter {
             StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
                     .setPlaceholder("Select your ticket topic");
 
-            for (ICategory category : Main.CATEGORIES) {
-                selectionBuilder.addOption(category.getLabel(), "select-" + category.getId(), category.getDescription());
+            for (TicketCategory category : TicketCategory.values()) {
+                selectionBuilder.addOption(category.getLabel(), "select-category " + category.getId(), category.getDescription());
             }
 
             event.getGuild().getTextChannelById(config.getBaseChannel()).sendMessageEmbeds(builder.build())

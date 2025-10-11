@@ -28,6 +28,8 @@ dependencies {
 
     compileOnly("org.projectlombok", "lombok", "1.18.40")
     annotationProcessor("org.projectlombok", "lombok", "1.18.40")
+
+    compileOnly("org.jetbrains", "annotations", "26.0.2-1")
 }
 
 tasks.withType<JavaCompile> {
@@ -39,4 +41,47 @@ tasks.withType<ShadowJar> {
         attributes["Main-Class"] = "eu.greev.dcbot.Main"
     }
     archiveFileName.set("discord-ticketbot.jar")
+}
+
+tasks.register("checkAnnotations") {
+    doLast {
+        val forbiddenPackages = listOf(
+            "javax.annotation",
+            "org.jspecify.annotations",
+            "edu.umd.cs.findbugs.annotations"
+        )
+
+        val nullabilityAnnotations = listOf(
+            "nullable",
+            "notnull",
+            "nonnull",
+            "nullmarked",
+            "nullunmarked"
+        )
+
+        val forbiddenNames = forbiddenPackages.flatMap { pkg ->
+            nullabilityAnnotations.map { ann ->
+                "$pkg.$ann"
+            }
+        }
+
+        val files = fileTree("src") {
+            include("**/*.java", "**/*.kt")
+        }
+
+        val badUsages = files.filter { file ->
+            val text = file.readText().lowercase()
+            forbiddenNames.any { name -> text.contains(name.lowercase()) }
+        }
+
+        if (!badUsages.isEmpty) {
+            println("❌ Forbidden nullability annotations found:")
+            badUsages.forEach { println(" - ${it.path}") }
+            throw GradleException(
+                "Use JetBrains Nullability Annotations instead of javax, jspecify, etc."
+            )
+        } else {
+            println("✅ No forbidden nullability annotations found.")
+        }
+    }
 }

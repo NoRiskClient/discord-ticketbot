@@ -1,23 +1,28 @@
 package eu.greev.dcbot.ticketsystem.interactions.buttons;
 
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
-import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.events.Event;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 
-@AllArgsConstructor
-public class TicketNevermind extends AbstractButton {
-    private final TicketService ticketService;
-    private final Config config;
+public class TicketNevermind extends Interaction {
+    public TicketNevermind(@NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
+        super(config, ticketService, jda);
+    }
 
     @Override
-    public void execute(Event evt) {
-        ButtonInteractionEvent event = (ButtonInteractionEvent) evt;
+    public String getIdentifier() {
+        return "nevermind";
+    }
+
+    @Override
+    public void handleButtonInteraction(@NotNull ButtonInteractionEvent event) {
         if (config.getServerName() == null) {
             EmbedBuilder error = new EmbedBuilder()
                     .setColor(Color.RED)
@@ -27,7 +32,7 @@ public class TicketNevermind extends AbstractButton {
         }
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         if (ticket.getOwner().equals(event.getUser())) {
-            ticketService.closeTicket(ticket, true, event.getMember(), null);
+            ticketService.closeTicket(ticket, true, event.getUser(), null);
         }else {
             EmbedBuilder builder = new EmbedBuilder().setColor(Color.RED)
                     .addField("❌ **Missing access**", "You can not click this button", false)
