@@ -48,7 +48,7 @@ public class SetWaiting extends AbstractCommand {
             builder.setAuthor(member.getEffectiveName(), null, member.getEffectiveAvatarUrl())
                     .setDescription("Waiting for response.")
                     .setColor(Color.decode(config.getColor()));
-            event.replyEmbeds(builder.build()).queue();
+            event.replyEmbeds(builder.build()).setEphemeral(true).queue();
         } else {
             builder.addField("❌ **Changing waiting mode failed**", "This ticket is already in waiting mode!", false);
             event.replyEmbeds(builder.build()).setEphemeral(true).queue();
