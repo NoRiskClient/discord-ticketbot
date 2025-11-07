@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -46,6 +47,8 @@ import java.util.stream.Collectors;
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
     public static final List<ICategory> CATEGORIES = new ArrayList<>();
+    public static final Map<ICategory, List<Category>> OVERFLOW_CHANNEL_CATEGORIES = new HashMap<>();
+    public static final List<Category> OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES = new ArrayList<>();
     @Getter
     private static String createCommandId;
     @Getter
@@ -98,6 +101,8 @@ public class Main {
         registerCategory(new Bug(), config, ticketService, ticketData);
         registerCategory(new Payment(), config, ticketService, ticketData);
         registerCategory(new Security(), config, ticketService, ticketData);
+
+        ticketService.loadOverflowCategories();
 
         jda.updateCommands().addCommands(Commands.slash("ticket", "Manage the ticket system")
                 .addSubcommands(new SubcommandData("add", "Add a User to this ticket")
@@ -200,6 +205,7 @@ public class Main {
     private static void registerCategory(ICategory category, Config config, TicketService ticketService, TicketData ticketData) {
         registerInteraction("select-" + category.getId(), new CategorySelection(category));
         registerInteraction(category.getId(), new TicketModal(category, config, ticketService, ticketData));
+        OVERFLOW_CHANNEL_CATEGORIES.put(category, new ArrayList<>());
         CATEGORIES.add(category);
     }
 }
