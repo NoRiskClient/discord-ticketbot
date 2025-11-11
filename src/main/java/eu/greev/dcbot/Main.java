@@ -1,5 +1,6 @@
 package eu.greev.dcbot;
 
+import eu.greev.dcbot.scheduler.DailyScheduler;
 import eu.greev.dcbot.scheduler.HourlyScheduler;
 import eu.greev.dcbot.ticketsystem.TicketListener;
 import eu.greev.dcbot.ticketsystem.categories.*;
@@ -143,6 +144,7 @@ public class Main {
         );
 
         new HourlyScheduler(config, ticketService, ticketData, jda).start();
+        new DailyScheduler(config, ticketService, jda, jdbi).start();
 
         EmbedBuilder missingPerm = new EmbedBuilder().setColor(Color.RED)
                 .addField("❌ **Missing permission**", "You are not permitted to use this command!", false);

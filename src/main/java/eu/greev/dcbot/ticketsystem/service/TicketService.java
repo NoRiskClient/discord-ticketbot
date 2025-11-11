@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
@@ -22,9 +23,9 @@ import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
-import java.sql.ResultSet;
 import java.time.Instant;
 import java.util.*;
 import java.util.List;
@@ -280,18 +281,7 @@ public class TicketService {
             ticket.getTextChannel().getManager().setParent(channelCategory).delay(500, TimeUnit.MILLISECONDS).queue(
                     success -> guild.modifyTextChannelPositions(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId())))
                             .sortOrder(
-                                    (o1, o2) -> {
-                                        Ticket t1 = getTicketByChannelId(o1.getIdLong());
-                                        Ticket t2 = getTicketByChannelId(o2.getIdLong());
-
-                                        if (t1 == null || t2 == null) {
-                                            return 0;
-                                        } else {
-                                            int result = Long.compare(t1.getSupporter().getIdLong(), t2.getSupporter().getIdLong());
-
-                                            return result != 0 ? result : Long.compare(t1.getId(), t2.getId());
-                                        }
-                                    }
+                                    getChannelComparator()
                             ).queue(),
                     error -> {
                         if (error.getMessage().contains("CHANNEL_PARENT_MAX_CHANNELS")) {
@@ -340,6 +330,22 @@ public class TicketService {
         return true;
     }
 
+    @NotNull
+    public Comparator<GuildChannel> getChannelComparator() {
+        return (o1, o2) -> {
+            Ticket t1 = getTicketByChannelId(o1.getIdLong());
+            Ticket t2 = getTicketByChannelId(o2.getIdLong());
+
+            if (t1 == null || t2 == null) {
+                return 0;
+            } else {
+                int result = Long.compare(t1.getSupporter().getIdLong(), t2.getSupporter().getIdLong());
+
+                return result != 0 ? result : Long.compare(t1.getId(), t2.getId());
+            }
+        };
+    }
+
     public void loadOverflowCategories() {
         Guild guild = jda.getGuildById(config.getServerId());
 
@@ -372,7 +378,7 @@ public class TicketService {
 
     private Category createDynamicCategory(Category defaultCategory, Ticket ticket, List<Category> dynamicCategories) {
         Guild guild = jda.getGuildById(config.getServerId());
-        Category newCategory = guild.createCategory(defaultCategory.getName() + " " + (dynamicCategories.size() + 2)).complete();
+        Category newCategory = guild.createCategory(defaultCategory.getName() + " (Overflow)").complete();
 
         guild.modifyCategoryPositions()
                 .selectPosition(newCategory)
