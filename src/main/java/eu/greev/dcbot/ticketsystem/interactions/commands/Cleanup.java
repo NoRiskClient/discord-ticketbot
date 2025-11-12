@@ -2,6 +2,7 @@ package eu.greev.dcbot.ticketsystem.interactions.commands;
 
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.Event;
@@ -9,6 +10,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 
 import java.awt.*;
 
+@Slf4j
 public class Cleanup extends AbstractCommand {
     public Cleanup(Config config, TicketService ticketService, EmbedBuilder missingPerm, JDA jda) {
         super(config, ticketService, missingPerm, jda);
@@ -23,6 +25,8 @@ public class Cleanup extends AbstractCommand {
         }
 
         ticketService.consolidateCategoriesAndCleanup();
+
+        log.info("Manual cleanup triggered by {}", event.getUser().getName());
 
         event.replyEmbeds(new EmbedBuilder()
                 .setColor(Color.decode(config.getColor()))
