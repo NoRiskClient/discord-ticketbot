@@ -524,4 +524,82 @@ public class TicketService {
 
         return name;
     }
+
+    public void consolidateCategoriesAndCleanup() {
+        for (ICategory category : Main.CATEGORIES) {
+            Category mainCategory = jda.getCategoryById(config.getCategories().get(category.getId()));
+            if (mainCategory == null) {
+                continue;
+            }
+
+            List<Category> overflowCategories = new ArrayList<>(Main.OVERFLOW_CHANNEL_CATEGORIES.get(category));
+            overflowCategories.addFirst(mainCategory);
+
+            consolidateChannels(overflowCategories, mainCategory, category);
+        }
+
+        Category mainUnclaimedCategory = jda.getCategoryById(config.getUnclaimedCategory());
+        if (mainUnclaimedCategory != null) {
+            List<Category> unclaimedOverflow = new ArrayList<>(Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES);
+            unclaimedOverflow.addFirst(mainUnclaimedCategory);
+
+            consolidateChannels(unclaimedOverflow, mainUnclaimedCategory, null);
+        }
+    }
+
+    public void consolidateChannels(List<Category> categories, Category mainCategory, ICategory ticketCategory) {
+        if (mainCategory == null) {
+            return;
+        }
+
+        List<TextChannel> allChannels = categories.stream()
+                .flatMap(c -> c.getTextChannels().stream())
+                .toList();
+
+        int channelsCount = allChannels.size();
+        int categoriesNeeded = Math.max(1, (channelsCount + 49) / 50);
+
+        List<Category> categoriesToKeep = categories.stream()
+                .limit(categoriesNeeded)
+                .toList();
+
+        int channelIndex = 0;
+        for (Category targetCategory : categoriesToKeep) {
+            int channelsForThisCategory = Math.min(50, allChannels.size() - channelIndex);
+
+            for (int i = 0; i < channelsForThisCategory; i++) {
+                TextChannel channel = allChannels.get(channelIndex++);
+                if (!channel.getParentCategory().equals(targetCategory)) {
+                    channel.getManager().setParent(targetCategory).queue();
+                }
+            }
+        }
+
+        categoriesToKeep.forEach(c ->
+                c.modifyTextChannelPositions()
+                        .sortOrder(getChannelComparator())
+                        .queue()
+        );
+
+        List<Category> categoriesToDelete = categories.stream()
+                .skip(categoriesNeeded)
+                .filter(c -> !c.equals(mainCategory))
+                .toList();
+
+        for (Category category : categoriesToDelete) {
+            if (ticketCategory != null) {
+                Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticketCategory).remove(category);
+            } else {
+                Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(category);
+            }
+
+            jdbi.useHandle(handle ->
+                    handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
+                            .bind(0, category.getId())
+                            .execute()
+            );
+
+            category.delete().queue();
+        }
+    }
 }

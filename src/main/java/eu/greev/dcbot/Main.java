@@ -134,6 +134,7 @@ public class Main {
                         .addSubcommands(new SubcommandData("add", "Add a staff member to the ticket thread")
                                 .addOption(OptionType.USER, "staff", "Staff member to add", true))
                         .addSubcommands(new SubcommandData("join", "Join the ticket thread")))
+                .addSubcommands(new SubcommandData("clean-up", "Run the daily cleanup manually"))
         ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
@@ -144,7 +145,7 @@ public class Main {
         );
 
         new HourlyScheduler(config, ticketService, ticketData, jda).start();
-        new DailyScheduler(config, ticketService, jda, jdbi).start();
+        new DailyScheduler(ticketService).start();
 
         EmbedBuilder missingPerm = new EmbedBuilder().setColor(Color.RED)
                 .addField("❌ **Missing permission**", "You are not permitted to use this command!", false);
@@ -179,6 +180,8 @@ public class Main {
 
         registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
         registerInteraction("list-claim-emojis", new ListClaimEmojis(config, ticketService, missingPerm, jda));
+
+        registerInteraction("clean-up", new Cleanup(config, ticketService, missingPerm, jda));
 
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 
