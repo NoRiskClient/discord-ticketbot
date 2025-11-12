@@ -23,7 +23,6 @@ import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
-import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.time.Instant;
@@ -330,7 +329,6 @@ public class TicketService {
         return true;
     }
 
-    @NotNull
     public Comparator<GuildChannel> getChannelComparator() {
         return (o1, o2) -> {
             Ticket t1 = getTicketByChannelId(o1.getIdLong());
