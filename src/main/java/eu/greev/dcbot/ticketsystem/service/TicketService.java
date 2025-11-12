@@ -575,10 +575,13 @@ public class TicketService {
             }
         }
 
-        categoriesToKeep.forEach(c ->
-                c.modifyTextChannelPositions()
-                        .sortOrder(getChannelComparator())
-                        .queue()
+        categoriesToKeep.forEach(c -> {
+                    if (!c.getChannels().isEmpty()) {
+                        c.modifyTextChannelPositions()
+                                .sortOrder(getChannelComparator())
+                                .queue();
+                    }
+                }
         );
 
         List<Category> categoriesToDelete = categories.stream()
