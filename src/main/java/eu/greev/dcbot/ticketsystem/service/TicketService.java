@@ -577,7 +577,7 @@ public class TicketService {
         }
 
         categoriesToKeep.forEach(c -> {
-                    if (!c.getChannels().isEmpty()) {
+                    if (!c.getChannels().isEmpty() && ticketCategory != null) {
                         c.modifyTextChannelPositions()
                                 .sortOrder(getChannelComparator())
                                 .queue();
