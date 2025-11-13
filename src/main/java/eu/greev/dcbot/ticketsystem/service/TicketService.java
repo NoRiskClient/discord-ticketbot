@@ -351,7 +351,7 @@ public class TicketService {
                 .map((resultSet, index, ctx) -> {
                     String categoryIdStr = resultSet.getString("categoryID");
                     String ticketCategoryId = resultSet.getString("ticketCategory");
-                    log.info("{} {}", categoryIdStr, ticketCategoryId);
+                    log.info("Found overflow category: {} {}", categoryIdStr, ticketCategoryId);
 
                     Category category = guild.getCategoryById(categoryIdStr);
                     if (category != null) {
@@ -370,7 +370,8 @@ public class TicketService {
                     }
 
                     return null;
-                }));
+                })
+                .list());
     }
 
 
