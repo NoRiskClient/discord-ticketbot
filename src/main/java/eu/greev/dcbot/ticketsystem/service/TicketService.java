@@ -267,16 +267,16 @@ public class TicketService {
 
         Guild guild = jda.getGuildById(config.getServerId());
 
-        List<Category> dynamicCategories = Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticket.getCategory());
-        Category defaultCategory = guild.getCategoryById(config.getCategories().get(ticket.getCategory().getId()));
-        Category channelCategory = defaultCategory.getChannels().size() >= 50 ?
-                dynamicCategories
-                        .stream()
-                        .filter(c -> c.getChannels().size() < 50)
-                        .findFirst()
-                        .orElseGet(() -> createDynamicCategory(defaultCategory, ticket, dynamicCategories)) : defaultCategory;
-
         if (config.getCategories().get(ticket.getCategory().getId()) != null) {
+            List<Category> dynamicCategories = Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticket.getCategory());
+            Category defaultCategory = guild.getCategoryById(config.getCategories().get(ticket.getCategory().getId()));
+            Category channelCategory = defaultCategory.getChannels().size() >= 50 ?
+                    dynamicCategories
+                            .stream()
+                            .filter(c -> c.getChannels().size() < 50)
+                            .findFirst()
+                            .orElseGet(() -> createDynamicCategory(defaultCategory, ticket, dynamicCategories)) : defaultCategory;
+
             ticket.getTextChannel().getManager().setParent(channelCategory).delay(500, TimeUnit.MILLISECONDS).queue(
                     success -> guild.modifyTextChannelPositions(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId())))
                             .sortOrder(
