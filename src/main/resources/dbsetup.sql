@@ -68,3 +68,8 @@ CREATE TABLE IF NOT EXISTS logs
     ticketID    INTEGER,
     FOREIGN KEY (ticketID) REFERENCES tickets (ticketID)
 );
+CREATE TABLE IF NOT EXISTS overflow_categories (
+    categoryID     VARCHAR PRIMARY KEY  NOT NULL,
+
+    ticketCategory VARCHAR DEFAULT NULL NULL
+);

@@ -1,5 +1,6 @@
 package eu.greev.dcbot;
 
+import eu.greev.dcbot.scheduler.DailyScheduler;
 import eu.greev.dcbot.scheduler.HourlyScheduler;
 import eu.greev.dcbot.ticketsystem.TicketListener;
 import eu.greev.dcbot.ticketsystem.categories.*;
@@ -18,6 +19,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -46,6 +48,8 @@ import java.util.stream.Collectors;
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
     public static final List<ICategory> CATEGORIES = new ArrayList<>();
+    public static final Map<ICategory, List<Category>> OVERFLOW_CHANNEL_CATEGORIES = new HashMap<>();
+    public static final List<Category> OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES = new ArrayList<>();
     @Getter
     private static String createCommandId;
     @Getter
@@ -99,6 +103,8 @@ public class Main {
         registerCategory(new Payment(), config, ticketService, ticketData);
         registerCategory(new Security(), config, ticketService, ticketData);
 
+        ticketService.loadOverflowCategories();
+
         jda.updateCommands().addCommands(Commands.slash("ticket", "Manage the ticket system")
                 .addSubcommands(new SubcommandData("add", "Add a User to this ticket")
                         .addOption(OptionType.USER, "member", "The user adding to the current ticket", true))
@@ -128,6 +134,7 @@ public class Main {
                         .addSubcommands(new SubcommandData("add", "Add a staff member to the ticket thread")
                                 .addOption(OptionType.USER, "staff", "Staff member to add", true))
                         .addSubcommands(new SubcommandData("join", "Join the ticket thread")))
+                .addSubcommands(new SubcommandData("clean-up", "Run the daily cleanup manually"))
         ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
@@ -138,6 +145,7 @@ public class Main {
         );
 
         new HourlyScheduler(config, ticketService, ticketData, jda).start();
+        new DailyScheduler(ticketService).start();
 
         EmbedBuilder missingPerm = new EmbedBuilder().setColor(Color.RED)
                 .addField("❌ **Missing permission**", "You are not permitted to use this command!", false);
@@ -173,6 +181,8 @@ public class Main {
         registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
         registerInteraction("list-claim-emojis", new ListClaimEmojis(config, ticketService, missingPerm, jda));
 
+        registerInteraction("clean-up", new Cleanup(config, ticketService, missingPerm, jda));
+
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 
 
@@ -200,6 +210,7 @@ public class Main {
     private static void registerCategory(ICategory category, Config config, TicketService ticketService, TicketData ticketData) {
         registerInteraction("select-" + category.getId(), new CategorySelection(category));
         registerInteraction(category.getId(), new TicketModal(category, config, ticketService, ticketData));
+        OVERFLOW_CHANNEL_CATEGORIES.put(category, new ArrayList<>());
         CATEGORIES.add(category);
     }
 }
