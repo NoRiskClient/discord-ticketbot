@@ -48,7 +48,7 @@ public class TicketListener extends ListenerAdapter {
 
     @Override
     public void onChannelUpdateArchived(ChannelUpdateArchivedEvent event) {
-        if (ticketService.getTicketByChannelId(event.getChannel().asThreadChannel().getParentMessageChannel().getIdLong()) == null
+        if (event.getChannel().asThreadChannel().getParentChannel().getType() == ChannelType.FORUM || ticketService.getTicketByChannelId(event.getChannel().asThreadChannel().getParentMessageChannel().getIdLong()) == null
                 || Boolean.FALSE.equals(event.getNewValue()) || !(event.getChannel() instanceof ThreadChannel channel)) {
             return;
         }
