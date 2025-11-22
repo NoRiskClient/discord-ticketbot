@@ -55,6 +55,11 @@ public class HourlyScheduler {
             log.debug("Checking ticket ID: {}", ticketId);
             Ticket ticket = ticketService.getTicketByTicketId(ticketId);
 
+            if (ticket == null) {
+                log.warn("Ticket ID {} not found, skipping...", ticketId);
+                continue;
+            }
+
             boolean shouldRemind = ticket.isWaiting() && ticket.getWaitingSince() != null &&
                     ticket.getWaitingSince()
                             .plus((long) REMIND_INTERVAL_HOURS * (ticket.getRemindersSent() + 1), ChronoUnit.HOURS)
