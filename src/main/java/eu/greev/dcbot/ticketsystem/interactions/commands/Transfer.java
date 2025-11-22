@@ -3,16 +3,19 @@ package eu.greev.dcbot.ticketsystem.interactions.commands;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 
 import java.awt.*;
 import java.time.Instant;
 
+@Slf4j
 public class Transfer extends AbstractCommand {
     private final EmbedBuilder wrongChannel;
 
@@ -58,7 +61,15 @@ public class Transfer extends AbstractCommand {
         Member sup = event.getOption("staff").getAsMember();
         if (sup.getRoles().contains(jda.getRoleById(config.getStaffId())) || !sup.getUser().equals(ticket.getSupporter())) {
             ticket.setSupporter(sup.getUser());
-            ticket.getTextChannel().getManager().setName(ticketService.generateChannelName(ticket)).queue();
+            try {
+                ticket.getTextChannel().getManager().setName(ticketService.generateChannelName(ticket, false)).complete();
+            } catch (ErrorResponseException e) {
+                if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
+                    ticket.getTextChannel().getManager().setName(ticketService.generateChannelName(ticket, true)).complete();
+                } else {
+                    log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e);
+                }
+            }
             EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                     .setColor(Color.decode(config.getColor()))
                     .setAuthor(event.getUser().getName(), null, event.getUser().getEffectiveAvatarUrl())

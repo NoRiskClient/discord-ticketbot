@@ -99,7 +99,7 @@ public class TicketService {
                         .findFirst()
                         .orElseGet(() -> createDynamicCategory(defaultCategory, finalTicket1, dynamicCategories)) : defaultCategory;
 
-        ChannelAction<TextChannel> action = guild.createTextChannel(generateChannelName(ticket), channelCategory)
+        ChannelAction<TextChannel> action = guild.createTextChannel(generateChannelName(ticket, false), channelCategory)
                 .addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY))
                 .addMemberPermissionOverride(owner.getIdLong(), List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null);
 
@@ -114,7 +114,16 @@ public class TicketService {
             action.addRolePermissionOverride(config.getStaffId(), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null);
         }
 
-        TextChannel ticketChannel = action.complete();
+        TextChannel ticketChannel;
+        try {
+            ticketChannel = action.complete();
+        } catch (ErrorResponseException e) {
+            if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
+                ticketChannel = action.setName(generateChannelName(ticket, true)).complete();
+            } else {
+                return Optional.of("An error occurred while creating the ticket channel: " + e.getMessage());
+            }
+        }
         ThreadChannel thread = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
 
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.decode(config.getColor()))
@@ -261,7 +270,16 @@ public class TicketService {
         if (supporter == ticket.getOwner()) return false;
 
         ticket.setSupporter(supporter);
-        ticket.getTextChannel().getManager().setName(generateChannelName(ticket)).queue();
+
+        try {
+            ticket.getTextChannel().getManager().setName(generateChannelName(ticket, false)).complete();
+        } catch (ErrorResponseException e) {
+            if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
+                ticket.getTextChannel().getManager().setName(generateChannelName(ticket, true)).complete();
+            } else {
+                log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e);
+            }
+        }
 
         ticket.getThreadChannel().addThreadMember(supporter).queue();
 
@@ -399,7 +417,15 @@ public class TicketService {
     public void toggleWaiting(Ticket ticket, boolean waiting) {
         TextChannelManager manager = ticket.getTextChannel().getManager();
         ticket.setWaiting(waiting);
-        manager.setName(generateChannelName(ticket)).queue();
+        try {
+            manager.setName(generateChannelName(ticket, false)).complete();
+        } catch (ErrorResponseException e) {
+            if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
+                manager.setName(generateChannelName(ticket, true)).complete();
+            } else {
+                log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e);
+            }
+        }
     }
 
     public boolean addUser(Ticket ticket, User user) {
@@ -507,7 +533,7 @@ public class TicketService {
         changes.clear();
     }
 
-    public String generateChannelName(Ticket ticket) {
+    public String generateChannelName(Ticket ticket, boolean excludeUsername) {
         String category = ticket.getCategory().getId();
         int ticketId = ticket.getId();
 
@@ -521,7 +547,11 @@ public class TicketService {
             name += config.getClaimEmojis().getOrDefault(ticket.getSupporter().getIdLong(), "✓") + "-";
         }
 
-        name += category + "-" + ticketId + "-" + ticket.getOwner().getName();
+        name += category + "-" + ticketId;
+
+        if (!excludeUsername) {
+            name += "-" + ticket.getOwner().getName();
+        }
 
         return name;
     }
