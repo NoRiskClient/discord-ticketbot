@@ -9,16 +9,18 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.utils.TimeUtil;
 
 import java.awt.*;
-import java.time.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @AllArgsConstructor
@@ -49,7 +51,7 @@ public class HourlyScheduler {
         List<Integer> ticketsIds = ticketData.getOpenTicketsIds();
         int userReminders = 0;
         int autoClosures = 0;
-        AtomicInteger supporterReminders = new AtomicInteger(0);
+        int supporterReminders = 0;
 
         for (Integer ticketId : ticketsIds) {
             log.debug("Checking ticket ID: {}", ticketId);
@@ -70,7 +72,12 @@ public class HourlyScheduler {
                             .plus(AUTO_CLOSE_HOURS, ChronoUnit.HOURS)
                             .isBefore(Instant.now());
 
-            AtomicBoolean shouldRemindSupporter = new AtomicBoolean(false);
+            boolean shouldRemindSupporter = !ticket.isWaiting() &&
+                    ticket.getSupporter() != null &&
+                    ticket.getTextChannel() != null &&
+                    !ticket.getTextChannel().getLatestMessageId().equals("0") &&
+                    TimeUtil.getTimeCreated(ticket.getTextChannel().getLatestMessageIdLong()).plusHours((long) REMIND_SUPPORTER_HOURS * (ticket.getSupporterRemindersSent() + 1))
+                            .isBefore(Instant.now().atZone(ZoneId.of("UTC")).toOffsetDateTime());
 
             if (shouldClose) {
                 ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Automatic close due to inactivity");
@@ -111,42 +118,14 @@ public class HourlyScheduler {
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
                 userReminders++;
-            } else {
-                if (ticket.getTextChannel() == null || ticket.getThreadChannel() == null) {
-                    log.warn("Skipping supporter reminder for ticket {} because channel or thread is null", ticket.getId());
-                } else {
-                    String latestId = ticket.getTextChannel().getLatestMessageId();
-                    if (latestId == null || latestId.equals("0")) {
-                        log.debug("No latest message found for channel {}. Skipping reminder check.", ticket.getTextChannel().getId());
-                    } else {
-                        ticket.getTextChannel()
-                                .retrieveMessageById(latestId)
-                                .queue(message -> {
-                                            shouldRemindSupporter.set(!ticket.isWaiting() && ticket.getSupporter() != null &&
-                                                    message.getTimeCreated()
-                                                            .plusHours((long) REMIND_SUPPORTER_HOURS * (ticket.getSupporterRemindersSent() + 1))
-                                                            .isBefore(Instant.now().atZone(ZoneId.of("UTC")).toOffsetDateTime()));
+            } else if (shouldRemindSupporter) {
+                ticket.getThreadChannel().sendMessage(ticket.getSupporter().getAsMention()).queue();
 
-                                            if (shouldRemindSupporter.get()) {
-                                                ticket.getThreadChannel()
-                                                        .sendMessage(ticket.getSupporter().getAsMention())
-                                                        .queue();
-
-                                                ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
-                                                supporterReminders.incrementAndGet();
-                                            }
-                                        }, failure -> {
-                                            if (failure instanceof ErrorResponseException ere) {
-                                                log.warn("Failed to retrieve latest message for channel {} (ticket {}): {} - {}", ticket.getTextChannel().getId(), ticket.getId(), ere.getErrorCode(), ere.getMeaning());
-                                            } else {
-                                                log.warn("Failed to retrieve latest message for channel {} (ticket {}): {}", ticket.getTextChannel().getId(), ticket.getId(), failure.getMessage());
-                                            }
-                                        });
-                    }
-                }
+                ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
+                supporterReminders++;
             }
 
-            log.debug("Should remind: {}, Should close: {}", shouldRemind, shouldClose);
+            log.debug("Should remind: {}, Should close: {}, Should remind supporter: {}", shouldRemind, shouldClose, shouldRemindSupporter);
 
             try {
                 TimeUnit.SECONDS.sleep(10L);
@@ -155,7 +134,7 @@ public class HourlyScheduler {
             }
         }
 
-        sendProcessingSummary(userReminders, supporterReminders.get(), autoClosures, ticketsIds.size());
+        sendProcessingSummary(userReminders, supporterReminders, autoClosures, ticketsIds.size());
     }
 
     private void sendProcessingSummary(int userReminders, int supporterReminders, int autoClosures, int totalTickets) {
@@ -173,8 +152,8 @@ public class HourlyScheduler {
                 jda.getTextChannelById(config.getLogChannel())
                         .sendMessageEmbeds(summaryBuilder.build())
                         .queue(
-                            success -> log.info("Processing summary sent to log channel"),
-                            failure -> log.error("Failed to send processing summary to log channel: {}", failure.getMessage())
+                                success -> log.info("Processing summary sent to log channel"),
+                                failure -> log.error("Failed to send processing summary to log channel: {}", failure.getMessage())
                         );
             } catch (Exception e) {
                 log.error("Error sending processing summary: {}", e.getMessage());
