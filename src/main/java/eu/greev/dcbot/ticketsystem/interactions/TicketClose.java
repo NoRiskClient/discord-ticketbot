@@ -58,10 +58,6 @@ public class TicketClose implements Interaction {
             event.replyEmbeds(error.build()).setEphemeral(true).queue();
             return;
         }
-        if (!config.isDevMode() && !event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
-            event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
-            return;
-        }
 
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         if (ticket == null) {
@@ -71,6 +67,16 @@ public class TicketClose implements Interaction {
                             .build())
                     .setEphemeral(true)
                     .queue();
+            return;
+        }
+
+        // Permission check: Staff, DevMode, or Owner (if no helper replied yet)
+        boolean isStaff = event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()));
+        boolean isOwner = event.getUser().getIdLong() == ticket.getOwner().getIdLong();
+        boolean canOwnerClose = isOwner && !hasHelperReplied(ticket);
+
+        if (!config.isDevMode() && !isStaff && !canOwnerClose) {
+            event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
             return;
         }
 
@@ -237,5 +243,29 @@ public class TicketClose implements Interaction {
                 .setFooter(config.getServerName(), config.getServerLogo())
                 .addField("Ticket closed", "Could not send DM to ticket owner. Rating request has been sent in this channel.", false);
         event.replyEmbeds(confirmation.build()).setEphemeral(true).queue();
+    }
+
+    /**
+     * Checks if any helper (non-owner, non-bot) has replied in the ticket.
+     */
+    private boolean hasHelperReplied(Ticket ticket) {
+        try {
+            var messages = ticket.getTextChannel().getIterableHistory()
+                    .takeAsync(100)
+                    .get();
+
+            for (var message : messages) {
+                // Skip bots
+                if (message.getAuthor().isBot()) continue;
+                // Skip the ticket owner
+                if (message.getAuthor().getIdLong() == ticket.getOwner().getIdLong()) continue;
+                // Someone else wrote - helper has replied
+                return true;
+            }
+        } catch (Exception e) {
+            // If we can't check, assume helper has replied (safer)
+            return true;
+        }
+        return false;
     }
 }
