@@ -2,13 +2,16 @@ package eu.greev.dcbot;
 
 import eu.greev.dcbot.scheduler.DailyScheduler;
 import eu.greev.dcbot.scheduler.HourlyScheduler;
+import eu.greev.dcbot.scheduler.RatingStatsScheduler;
 import eu.greev.dcbot.ticketsystem.TicketListener;
 import eu.greev.dcbot.ticketsystem.categories.*;
 import eu.greev.dcbot.ticketsystem.interactions.*;
 import eu.greev.dcbot.ticketsystem.interactions.buttons.*;
 import eu.greev.dcbot.ticketsystem.interactions.commands.*;
+import eu.greev.dcbot.ticketsystem.interactions.modals.RatingModal;
 import eu.greev.dcbot.ticketsystem.interactions.modals.TicketConfirmMessageModal;
 import eu.greev.dcbot.ticketsystem.interactions.modals.TicketModal;
+import eu.greev.dcbot.ticketsystem.service.RatingData;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
@@ -93,6 +96,7 @@ public class Main {
         initDatasource();
 
         TicketData ticketData = new TicketData(jda, jdbi);
+        RatingData ratingData = new RatingData(jdbi);
         TicketService ticketService = new TicketService(jda, config, jdbi, ticketData);
         jda.addEventListener(new TicketListener(ticketService, config, jda));
 
@@ -135,6 +139,7 @@ public class Main {
                                 .addOption(OptionType.USER, "staff", "Staff member to add", true))
                         .addSubcommands(new SubcommandData("join", "Join the ticket thread")))
                 .addSubcommands(new SubcommandData("clean-up", "Run the daily cleanup manually"))
+                .addSubcommands(new SubcommandData("rating-stats", "Show rating statistics"))
         ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
@@ -146,6 +151,7 @@ public class Main {
 
         new HourlyScheduler(config, ticketService, ticketData, jda).start();
         new DailyScheduler(ticketService).start();
+        new RatingStatsScheduler(config, ratingData, jda).start();
 
         EmbedBuilder missingPerm = new EmbedBuilder().setColor(Color.RED)
                 .addField("❌ **Missing permission**", "You are not permitted to use this command!", false);
@@ -183,8 +189,12 @@ public class Main {
 
         registerInteraction("clean-up", new Cleanup(config, ticketService, missingPerm, jda));
 
-        log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
+        registerInteraction("ticket-confirm-rating", new TicketConfirmRating(ticketService, config));
+        registerInteraction("rating-select", new RatingSelect(ticketService));
+        registerInteraction("rating-modal", new RatingModal(ticketService, ratingData, config, jda));
+        registerInteraction("rating-stats", new RatingStats(config, ticketService, missingPerm, jda, ratingData));
 
+        log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 
     }
 

@@ -43,7 +43,7 @@ public class TicketClose implements Interaction {
             event.replyEmbeds(error.build()).setEphemeral(true).queue();
             return;
         }
-        if (!event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
+        if (!config.isDevMode() && !event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
             event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
             return;
         }
@@ -59,8 +59,9 @@ public class TicketClose implements Interaction {
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.WHITE)
                 .addField("Close Confirmation", "Do you really want to close this ticket?", true);
         event.replyEmbeds(builder.build())
-                .addActionRow(Button.primary("ticket-confirm", "✔️ Close"))
-                .addActionRow(Button.primary("ticket-confirm-message", "✔️ Close with message"))
+                .addActionRow(Button.primary("ticket-confirm", "Close"))
+                .addActionRow(Button.primary("ticket-confirm-message", "Close with message"))
+                .addActionRow(Button.success("ticket-confirm-rating", "Close & Request Rating"))
                 .setEphemeral(true)
                 .queue();
     }

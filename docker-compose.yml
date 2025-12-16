@@ -1,0 +1,7 @@
+services:
+  ticketbot:
+    build: .
+    container_name: discord-ticketbot
+    restart: unless-stopped
+    volumes:
+      - ./Tickets:/app/Tickets

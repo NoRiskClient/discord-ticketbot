@@ -73,3 +73,21 @@ CREATE TABLE IF NOT EXISTS overflow_categories (
 
     ticketCategory VARCHAR DEFAULT NULL NULL
 );
+CREATE TABLE IF NOT EXISTS ratings
+(
+    ratingID    INTEGER PRIMARY KEY NOT NULL,
+
+    ticketID    INTEGER             NOT NULL,
+
+    ownerID     VARCHAR             NOT NULL,
+
+    supporterID VARCHAR             NOT NULL,
+
+    rating      INTEGER             NOT NULL CHECK (rating >= 1 AND rating <= 5),
+
+    message     VARCHAR DEFAULT NULL,
+
+    createdAt   BIGINT              NOT NULL,
+
+    FOREIGN KEY (ticketID) REFERENCES tickets (ticketID)
+);

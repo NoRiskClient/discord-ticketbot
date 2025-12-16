@@ -267,7 +267,7 @@ public class TicketService {
     }
 
     public boolean claim(Ticket ticket, User supporter) {
-        if (supporter == ticket.getOwner()) return false;
+        if (!config.isDevMode() && supporter == ticket.getOwner()) return false;
 
         ticket.setSupporter(supporter);
 

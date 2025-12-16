@@ -103,12 +103,26 @@ public class TicketListener extends ListenerAdapter {
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         if (event.getButton().getId() == null) return;
-        Main.INTERACTIONS.get(event.getButton().getId()).execute(event);
+        String buttonId = event.getButton().getId();
+
+        if (buttonId.startsWith("rating-") && !buttonId.equals("ticket-confirm-rating")) {
+            Main.INTERACTIONS.get("rating-select").execute(event);
+            return;
+        }
+
+        Main.INTERACTIONS.get(buttonId).execute(event);
     }
 
     @Override
     public void onModalInteraction(ModalInteractionEvent event) {
-        Main.INTERACTIONS.get(event.getModalId()).execute(event);
+        String modalId = event.getModalId();
+
+        if (modalId.startsWith("rating-modal-")) {
+            Main.INTERACTIONS.get("rating-modal").execute(event);
+            return;
+        }
+
+        Main.INTERACTIONS.get(modalId).execute(event);
     }
 
     @Override
@@ -128,7 +142,7 @@ public class TicketListener extends ListenerAdapter {
      */
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
-        if (event.getChannelType() == ChannelType.GUILD_PRIVATE_THREAD && event.isFromGuild()
+        if (!config.isDevMode() && event.getChannelType() == ChannelType.GUILD_PRIVATE_THREAD && event.isFromGuild()
                 && ticketService.getTicketByChannelId(event.getGuildChannel().asThreadChannel().getParentMessageChannel().getIdLong()) != null) {
 
             for (Member member : event.getMessage().getMentions().getMembers()) {
@@ -148,13 +162,37 @@ public class TicketListener extends ListenerAdapter {
         if (isValid(event) || event.getAuthor().getIdLong() == jda.getSelfUser().getIdLong()) return;
 
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
+
+        // Block messages from owner while pending rating
+        if (ticket.isPendingRating() && event.getAuthor().getIdLong() == ticket.getOwner().getIdLong()) {
+            if (config.isDevMode()) {
+                // DevMode: Show info message but don't delete (admin perms bypass permission denial)
+                EmbedBuilder info = new EmbedBuilder()
+                        .setColor(Color.ORANGE)
+                        .setDescription("⚠️ **[DevMode]** " + event.getAuthor().getAsMention() + ", diese Nachricht würde normalerweise blockiert werden. Bitte bewerte erst das Ticket!")
+                        .setFooter(config.getServerName(), config.getServerLogo());
+                event.getChannel().sendMessageEmbeds(info.build())
+                        .queue(msg -> msg.delete().queueAfter(10, java.util.concurrent.TimeUnit.SECONDS));
+            } else {
+                // Production: Delete message (fallback if permission denial fails)
+                event.getMessage().delete().queue();
+                EmbedBuilder info = new EmbedBuilder()
+                        .setColor(Color.ORANGE)
+                        .setDescription("⏳ " + event.getAuthor().getAsMention() + ", bitte bewerte erst das Ticket bevor du weitere Nachrichten senden kannst!")
+                        .setFooter(config.getServerName(), config.getServerLogo());
+                event.getChannel().sendMessageEmbeds(info.build())
+                        .queue(msg -> msg.delete().queueAfter(10, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            return;
+        }
+
         if (ticket.isWaiting()) {
             ticketService.toggleWaiting(ticket, false);
             ticket.setWaitingSince(null);
             ticket.setRemindersSent(0);
         }
 
-        if (ticket.getSupporter() == null) {
+        if (!config.isDevMode() && ticket.getSupporter() == null) {
             for (Member member : event.getMessage().getMentions().getMembers()) {
                 if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
                     event.getMessage().delete().queue();
