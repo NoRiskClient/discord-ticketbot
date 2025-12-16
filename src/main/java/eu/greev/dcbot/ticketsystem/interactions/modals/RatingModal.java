@@ -6,16 +6,20 @@ import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.service.RatingData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
+import me.ryzeon.transcripts.DiscordHtmlTranscripts;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.awt.*;
 import java.time.Instant;
 
+@Slf4j
 @AllArgsConstructor
 public class RatingModal implements Interaction {
     private final TicketService ticketService;
@@ -124,6 +128,25 @@ public class RatingModal implements Interaction {
         String starDisplay = getStarDisplay(stars);
         Color embedColor = stars >= 4 ? Color.GREEN : stars >= 3 ? Color.YELLOW : Color.RED;
 
+        // Generate HTML transcript and upload to log channel to get URL
+        String transcriptUrl = null;
+        try {
+            if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
+                FileUpload transcriptUpload = DiscordHtmlTranscripts.getInstance()
+                        .createTranscript(ticket.getTextChannel(), "transcript-" + ticket.getId() + ".html");
+
+                var logChannel = jda.getTextChannelById(config.getLogChannel());
+                if (logChannel != null) {
+                    var uploadMessage = logChannel.sendFiles(transcriptUpload).complete();
+                    if (!uploadMessage.getAttachments().isEmpty()) {
+                        transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to generate/upload HTML transcript for ticket #{}", ticket.getId(), e);
+        }
+
         EmbedBuilder notification = new EmbedBuilder()
                 .setColor(embedColor)
                 .setTitle("Ticket #" + ticket.getId() + " closed")
@@ -133,6 +156,10 @@ public class RatingModal implements Interaction {
 
         if (message != null && !message.isBlank()) {
             notification.addField("Feedback", message, false);
+        }
+
+        if (transcriptUrl != null) {
+            notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
         }
 
         for (Long channelId : config.getRatingNotificationChannels()) {

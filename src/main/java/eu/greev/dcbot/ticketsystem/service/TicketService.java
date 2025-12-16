@@ -1,5 +1,6 @@
 package eu.greev.dcbot.ticketsystem.service;
 
+import me.ryzeon.transcripts.DiscordHtmlTranscripts;
 import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Edit;
@@ -214,6 +215,25 @@ public class TicketService {
 
         transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getUser().getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
 
+        // Generate HTML transcript and upload to log channel to get URL
+        String transcriptUrl = null;
+        try {
+            if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
+                FileUpload htmlTranscriptUpload = DiscordHtmlTranscripts.getInstance()
+                        .createTranscript(ticket.getTextChannel(), "transcript-" + ticketId + ".html");
+
+                var logChannel = jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel());
+                if (logChannel != null) {
+                    var uploadMessage = logChannel.sendFiles(htmlTranscriptUpload).complete();
+                    if (!uploadMessage.getAttachments().isEmpty()) {
+                        transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to generate/upload HTML transcript for ticket #{}", ticketId, e);
+        }
+
         EmbedBuilder builder = new EmbedBuilder().setTitle("Ticket " + ticketId)
                 .addField("Closed by", closer.getAsMention(), false);
 
@@ -221,22 +241,27 @@ public class TicketService {
             builder.addField("Message", message, true);
         }
 
-        builder.addField("Text Transcript⠀⠀⠀⠀⠀⠀⠀⠀", "See attachment", false)
-                .setColor(Color.decode(config.getColor()))
+        if (transcriptUrl != null) {
+            builder.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
+        }
+
+        builder.setColor(Color.decode(config.getColor()))
                 .setFooter(config.getServerName(), config.getServerLogo());
 
         if (ticket.getOwner().getMutualGuilds().contains(jda.getGuildById(config.getServerId()))) {
             try {
                 ticket.getOwner().openPrivateChannel()
-                        .flatMap(channel -> channel.sendMessageEmbeds(builder.build()).setFiles(FileUpload.fromData(transcript.toFile(ticketId))))
+                        .flatMap(channel -> channel.sendMessageEmbeds(builder.build()))
                         .complete();
             } catch (ErrorResponseException e) {
                 log.warn("Couldn't send [{}] their transcript since an error occurred:\nMeaning:{} | Message:{} | Response:{}", ticket.getOwner().getName(), e.getMeaning(), e.getMessage(), e.getErrorResponse());
             }
         }
 
-        if (config.getLogChannel() != 0) {
-            jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel()).sendMessageEmbeds(builder.build()).setFiles(FileUpload.fromData(transcript.toFile(ticketId))).queue();
+        if (config.getLogChannel() != 0 && transcriptUrl != null) {
+            jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel())
+                    .sendMessageEmbeds(builder.build())
+                    .queue();
         }
 
         saveTranscriptChanges(ticket.getTranscript().getRecentChanges());
