@@ -1,0 +1,69 @@
+# ====================================
+# Discord Ticket Bot - Example Config
+# ====================================
+# Copy this file to ./Tickets/config.yml and fill in your values
+
+# Bot token (REQUIRED)
+token: "YOUR_BOT_TOKEN_HERE"
+
+# Server/Guild ID (set automatically by /ticket setup)
+serverId: 0
+
+# Staff role ID - members with this role can manage tickets
+staffId: 0
+
+# Category ID where unclaimed tickets are created
+unclaimedCategory: 0
+
+# Channel ID where the ticket creation menu is posted
+baseChannel: 0
+
+# Channel ID for logging closed tickets and transcripts (0 = disabled)
+logChannel: 0
+
+# Channel ID for posting daily/weekly/monthly stats (0 = disabled)
+ratingStatsChannel: 0
+
+# Category ID where tickets pending rating are moved (0 = disabled)
+pendingRatingCategory: 0
+
+# Server branding (set automatically from guild info)
+serverName: "My Server"
+serverLogo: "https://example.com/logo.png"
+
+# Embed color (HEX format)
+color: "#5865F2"
+
+# Maximum open tickets per user
+maxTicketsPerUser: 3
+
+# Development mode - bypasses permission checks
+devMode: false
+
+# Rating reminder settings
+ratingReminderIntervalHours: 24
+ratingMaxReminders: 3
+
+# User IDs to automatically add to ticket threads
+addToTicketThread:
+  - 123456789012345678
+
+# Channel IDs where rating notifications are posted
+ratingNotificationChannels:
+  - 123456789012345678
+
+# Custom claim emojis per user (userId: emoji)
+claimEmojis:
+  123456789012345678: "🎫"
+
+# Overflow categories per ticket type (categoryId: discordCategoryId)
+categories:
+  general: 123456789012345678
+  bug: 123456789012345678
+
+# Roles to ping per ticket category (categoryId: [roleIds])
+categoryRoles:
+  bug:
+    - 123456789012345678
+  security:
+    - 123456789012345678
