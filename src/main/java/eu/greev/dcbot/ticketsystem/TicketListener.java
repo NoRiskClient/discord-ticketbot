@@ -212,18 +212,25 @@ public class TicketListener extends ListenerAdapter {
         }
 
         if (!config.isDevMode() && ticket.getSupporter() == null) {
-            for (Member member : event.getMessage().getMentions().getMembers()) {
-                if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
-                    event.getMessage().delete().queue();
+            // Skip check for bots and staff members
+            boolean isBot = event.getAuthor().isBot();
+            boolean isStaff = event.getMember() != null &&
+                    event.getMember().getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId());
 
-                    EmbedBuilder builder = new EmbedBuilder()
-                            .setColor(Color.RED)
-                            .setTitle("Please do not ping staff members!")
-                            .setDescription("\uD83C\uDDEC\uD83C\uDDE7 A member of our staff will assist you shortly, thank you for your patience.\n\n\uD83C\uDDE9\uD83C\uDDEA Ein Teammitglied wird sich in Kürze um dein Ticket kümmern, vielen Dank für deine Geduld.")
-                            .setFooter(config.getServerName(), config.getServerLogo());
+            if (!isBot && !isStaff) {
+                for (Member member : event.getMessage().getMentions().getMembers()) {
+                    if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
+                        event.getMessage().delete().queue();
 
-                    event.getChannel().sendMessageEmbeds(builder.build()).queue();
-                    break;
+                        EmbedBuilder builder = new EmbedBuilder()
+                                .setColor(Color.RED)
+                                .setTitle("Please do not ping staff members!")
+                                .setDescription("\uD83C\uDDEC\uD83C\uDDE7 A member of our staff will assist you shortly, thank you for your patience.\n\n\uD83C\uDDE9\uD83C\uDDEA Ein Teammitglied wird sich in Kürze um dein Ticket kümmern, vielen Dank für deine Geduld.")
+                                .setFooter(config.getServerName(), config.getServerLogo());
+
+                        event.getChannel().sendMessageEmbeds(builder.build()).queue();
+                        break;
+                    }
                 }
             }
         }
