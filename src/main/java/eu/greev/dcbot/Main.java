@@ -106,6 +106,7 @@ public class Main {
         registerCategory(new Report(), config, ticketService, ticketData);
         registerCategory(new Creator(), config, ticketService, ticketData);
         registerCategory(new Bug(), config, ticketService, ticketData);
+        registerCategory(new CrashReport(), config, ticketService, ticketData);
         registerCategory(new Payment(), config, ticketService, ticketData);
         registerCategory(new Security(), config, ticketService, ticketData);
 
