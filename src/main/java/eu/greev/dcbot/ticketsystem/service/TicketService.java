@@ -72,7 +72,7 @@ public class TicketService {
             }
         }
 
-        if (openTickets >= config.getMaxTicketsPerUser()) {
+        if (!config.isDevMode() && openTickets >= config.getMaxTicketsPerUser()) {
             return Optional.of("You have reached the maximum number of open tickets (" + config.getMaxTicketsPerUser() + "). Please close an existing ticket before opening a new one.");
         }
 

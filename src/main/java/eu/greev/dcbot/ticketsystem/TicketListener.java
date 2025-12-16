@@ -3,6 +3,7 @@ package eu.greev.dcbot.ticketsystem;
 import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.interactions.TicketClose;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
@@ -104,6 +105,24 @@ public class TicketListener extends ListenerAdapter {
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         if (event.getButton().getId() == null) return;
         String buttonId = event.getButton().getId();
+
+        if (buttonId.startsWith("close-confirm-")) {
+            String[] parts = buttonId.split("-");
+            if (parts.length == 3) {
+                try {
+                    int ticketId = Integer.parseInt(parts[2]);
+                    ((TicketClose) Main.INTERACTIONS.get("close")).executeClose(event, ticketId);
+                } catch (NumberFormatException e) {
+                    event.reply("Invalid button.").setEphemeral(true).queue();
+                }
+            }
+            return;
+        }
+
+        if (buttonId.startsWith("rating-skip-")) {
+            Main.INTERACTIONS.get("rating-skip").execute(event);
+            return;
+        }
 
         if (buttonId.startsWith("rating-") && !buttonId.equals("ticket-confirm-rating")) {
             Main.INTERACTIONS.get("rating-select").execute(event);

@@ -192,6 +192,7 @@ public class Main {
         registerInteraction("ticket-confirm-rating", new TicketConfirmRating(ticketService, config));
         registerInteraction("rating-select", new RatingSelect(ticketService));
         registerInteraction("rating-modal", new RatingModal(ticketService, ratingData, config, jda));
+        registerInteraction("rating-skip", new RatingSkip(ticketService, config, jda));
         registerInteraction("rating-stats", new RatingStats(config, ticketService, missingPerm, jda, ratingData));
 
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
