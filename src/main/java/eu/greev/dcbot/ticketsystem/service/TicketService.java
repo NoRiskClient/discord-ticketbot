@@ -198,7 +198,7 @@ public class TicketService {
     public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message) {
         Transcript transcript = ticket.getTranscript();
         int ticketId = ticket.getId();
-        ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message);
+        ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message).setClosedAt(Instant.now().getEpochSecond());
         if (wasAccident) {
             ticket.getTextChannel().delete().queue();
             jdbi.withHandle(handle -> handle.createUpdate("DELETE FROM tickets WHERE ticketID=?").bind(0, ticketId).execute());

@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS tickets
 
     isOpen                 BOOL    DEFAULT 1,
 
-    closer                 VARCHAR DEFAULT ""
+    closer                 VARCHAR DEFAULT "",
+
+    closedAt               BIGINT  DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS messages
 (

@@ -57,6 +57,8 @@ public class Main {
     private static String createCommandId;
     @Getter
     private static String getTicketCommandId;
+    @Getter
+    private static RatingStatsScheduler ratingStatsScheduler;
     private static Jdbi jdbi;
 
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -140,6 +142,8 @@ public class Main {
                         .addSubcommands(new SubcommandData("join", "Join the ticket thread")))
                 .addSubcommands(new SubcommandData("clean-up", "Run the daily cleanup manually"))
                 .addSubcommands(new SubcommandData("rating-stats", "Show rating statistics"))
+                .addSubcommands(new SubcommandData("debug-stats", "Preview daily/weekly/monthly stats")
+                        .addOption(OptionType.STRING, "type", "Report type: daily, weekly, monthly", true))
         ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
@@ -151,7 +155,8 @@ public class Main {
 
         new HourlyScheduler(config, ticketService, ticketData, jda).start();
         new DailyScheduler(ticketService).start();
-        new RatingStatsScheduler(config, ratingData, jda).start();
+        ratingStatsScheduler = new RatingStatsScheduler(config, ratingData, ticketData, jda);
+        ratingStatsScheduler.start();
 
         EmbedBuilder missingPerm = new EmbedBuilder().setColor(Color.RED)
                 .addField("❌ **Missing permission**", "You are not permitted to use this command!", false);
@@ -194,6 +199,7 @@ public class Main {
         registerInteraction("rating-modal", new RatingModal(ticketService, ratingData, config, jda));
         registerInteraction("rating-skip", new RatingSkip(ticketService, config, jda));
         registerInteraction("rating-stats", new RatingStats(config, ticketService, missingPerm, jda, ratingData));
+        registerInteraction("debug-stats", new DebugStats(config, ticketService, missingPerm, jda));
 
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 
@@ -212,6 +218,14 @@ public class Main {
             System.exit(1);
         }
         Arrays.stream(setup.split(";")).toList().forEach(query -> jdbi.withHandle(h -> h.createUpdate(query).execute()));
+
+        // Migration: Add closedAt column if it doesn't exist
+        try {
+            jdbi.withHandle(h -> h.createUpdate("ALTER TABLE tickets ADD COLUMN closedAt BIGINT DEFAULT NULL").execute());
+            log.info("Added closedAt column to tickets table");
+        } catch (Exception e) {
+            // Column already exists, ignore
+        }
     }
 
     private static void registerInteraction(String identifier, Interaction interaction) {

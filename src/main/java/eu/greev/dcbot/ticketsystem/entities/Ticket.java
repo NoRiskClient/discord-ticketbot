@@ -38,6 +38,7 @@ public class Ticket {
     @Getter private TextChannel textChannel;
     @Getter private ThreadChannel threadChannel;
     @Getter private boolean isOpen;
+    @Getter private Long closedAt;
     @Getter private boolean pendingRating;
     @Getter private User pendingCloser;
     @Getter private Instant pendingRatingSince;
@@ -65,6 +66,12 @@ public class Ticket {
 
     public Ticket setOpen(boolean isOpen) {
         this.isOpen = isOpen;
+        this.save();
+        return this;
+    }
+
+    public Ticket setClosedAt(Long closedAt) {
+        this.closedAt = closedAt;
         this.save();
         return this;
     }
