@@ -70,12 +70,13 @@ public class TicketClose implements Interaction {
             return;
         }
 
-        // Permission check: Staff, DevMode, or Owner (if no helper replied yet)
+        // Permission check: Staff, Admin, DevMode, or Owner (if no helper replied yet)
         boolean isStaff = event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()));
+        boolean isAdmin = event.getMember().hasPermission(Permission.ADMINISTRATOR);
         boolean isOwner = event.getUser().getIdLong() == ticket.getOwner().getIdLong();
         boolean canOwnerClose = isOwner && !hasHelperReplied(ticket);
 
-        if (!config.isDevMode() && !isStaff && !canOwnerClose) {
+        if (!config.isDevMode() && !isStaff && !isAdmin && !canOwnerClose) {
             event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
             return;
         }

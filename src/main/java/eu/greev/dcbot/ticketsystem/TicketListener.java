@@ -212,12 +212,14 @@ public class TicketListener extends ListenerAdapter {
         }
 
         if (!config.isDevMode() && ticket.getSupporter() == null) {
-            // Skip check for bots and staff members
+            // Skip check for bots, staff members and admins
             boolean isBot = event.getAuthor().isBot();
             boolean isStaff = event.getMember() != null &&
                     event.getMember().getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId());
+            boolean isAdmin = event.getMember() != null &&
+                    event.getMember().hasPermission(Permission.ADMINISTRATOR);
 
-            if (!isBot && !isStaff) {
+            if (!isBot && !isStaff && !isAdmin) {
                 for (Member member : event.getMessage().getMentions().getMembers()) {
                     if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
                         event.getMessage().delete().queue();

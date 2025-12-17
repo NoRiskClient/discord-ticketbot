@@ -53,4 +53,9 @@ public class Payment implements ICategory {
 
         return map;
     }
+
+    @Override
+    public boolean isSensitive() {
+        return true;
+    }
 }

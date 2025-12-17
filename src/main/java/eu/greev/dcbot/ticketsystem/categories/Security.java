@@ -47,4 +47,9 @@ public class Security implements ICategory {
 
         return map;
     }
+
+    @Override
+    public boolean isSensitive() {
+        return true;
+    }
 }

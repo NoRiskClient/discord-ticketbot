@@ -101,13 +101,17 @@ public class RatingStatsScheduler {
     }
 
     private void sendWeeklyReport() {
-        if (config.getRatingStatsChannel() == 0) {
+        long channelId = config.getSpecialStatsChannel() != 0
+                ? config.getSpecialStatsChannel()
+                : config.getRatingStatsChannel();
+
+        if (channelId == 0) {
             return;
         }
 
-        TextChannel channel = jda.getTextChannelById(config.getRatingStatsChannel());
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) {
-            log.warn("Rating stats channel not found: {}", config.getRatingStatsChannel());
+            log.warn("Weekly stats channel not found: {}", channelId);
             return;
         }
 
@@ -117,17 +121,21 @@ public class RatingStatsScheduler {
         }
 
         channel.sendMessageEmbeds(embeds).queue();
-        log.info("Sent weekly report");
+        log.info("Sent weekly report to channel {}", channelId);
     }
 
     private void sendMonthlyReport() {
-        if (config.getRatingStatsChannel() == 0) {
+        long channelId = config.getSpecialStatsChannel() != 0
+                ? config.getSpecialStatsChannel()
+                : config.getRatingStatsChannel();
+
+        if (channelId == 0) {
             return;
         }
 
-        TextChannel channel = jda.getTextChannelById(config.getRatingStatsChannel());
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) {
-            log.warn("Rating stats channel not found: {}", config.getRatingStatsChannel());
+            log.warn("Monthly stats channel not found: {}", channelId);
             return;
         }
 
@@ -137,7 +145,7 @@ public class RatingStatsScheduler {
         }
 
         channel.sendMessageEmbeds(embeds).queue();
-        log.info("Sent monthly report");
+        log.info("Sent monthly report to channel {}", channelId);
     }
 
     // Public methods for debug commands

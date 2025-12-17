@@ -96,7 +96,7 @@ public class RatingModal implements Interaction {
 
         event.replyEmbeds(confirmation.build()).setEphemeral(true).queue();
 
-        sendRatingNotification(ticket, stars, message);
+        String transcriptUrl = sendRatingNotification(ticket, stars, message);
 
         ticket.setPendingRating(false);
 
@@ -107,11 +107,11 @@ public class RatingModal implements Interaction {
         }
 
         if (pendingCloser != null) {
-            ticketService.closeTicket(ticket, false, pendingCloser, null);
+            ticketService.closeTicket(ticket, false, pendingCloser, null, transcriptUrl);
         } else {
             Member owner = jda.getGuildById(config.getServerId()).getMember(ticket.getOwner());
             if (owner != null) {
-                ticketService.closeTicket(ticket, false, owner, null);
+                ticketService.closeTicket(ticket, false, owner, null, transcriptUrl);
             }
         }
     }
@@ -120,11 +120,7 @@ public class RatingModal implements Interaction {
         return "\u2605".repeat(stars) + "\u2606".repeat(5 - stars);
     }
 
-    private void sendRatingNotification(Ticket ticket, int stars, String message) {
-        if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {
-            return;
-        }
-
+    private String sendRatingNotification(Ticket ticket, int stars, String message) {
         String starDisplay = getStarDisplay(stars);
         Color embedColor = stars >= 4 ? Color.GREEN : stars >= 3 ? Color.YELLOW : Color.RED;
 
@@ -147,6 +143,10 @@ public class RatingModal implements Interaction {
             log.error("Failed to generate/upload HTML transcript for ticket #{}", ticket.getId(), e);
         }
 
+        if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {
+            return transcriptUrl;
+        }
+
         EmbedBuilder notification = new EmbedBuilder()
                 .setColor(embedColor)
                 .setTitle("Ticket #" + ticket.getId() + " closed")
@@ -154,11 +154,10 @@ public class RatingModal implements Interaction {
                 .setThumbnail(ticket.getSupporter().getEffectiveAvatarUrl())
                 .setFooter(config.getServerName(), config.getServerLogo());
 
-        if (message != null && !message.isBlank()) {
-            notification.addField("Feedback", message, false);
-        }
+        notification.addField("Feedback", (message != null && !message.isBlank()) ? message : "Kein Feedback", false);
 
-        if (transcriptUrl != null) {
+        // Only add transcript link for non-sensitive categories
+        if (transcriptUrl != null && !ticket.getCategory().isSensitive()) {
             notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
         }
 
@@ -168,5 +167,7 @@ public class RatingModal implements Interaction {
                 channel.sendMessageEmbeds(notification.build()).queue();
             }
         }
+
+        return transcriptUrl;
     }
 }

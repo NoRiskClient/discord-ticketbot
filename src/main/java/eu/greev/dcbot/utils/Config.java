@@ -23,6 +23,7 @@ public class Config {
     private long baseChannel;
     private long logChannel = 0;
     private long ratingStatsChannel = 0;
+    private long specialStatsChannel = 0;
     private boolean devMode = false;
     private int ratingReminderIntervalHours = 24;
     private int ratingMaxReminders = 3;

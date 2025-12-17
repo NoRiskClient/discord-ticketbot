@@ -21,8 +21,11 @@ baseChannel: 0
 # Channel ID for logging closed tickets and transcripts (0 = disabled)
 logChannel: 0
 
-# Channel ID for posting daily/weekly/monthly stats (0 = disabled)
+# Channel ID for posting daily stats (0 = disabled)
 ratingStatsChannel: 0
+
+# Channel ID for posting weekly/monthly stats (0 = uses ratingStatsChannel)
+specialStatsChannel: 0
 
 # Category ID where tickets pending rating are moved (0 = disabled)
 pendingRatingCategory: 0

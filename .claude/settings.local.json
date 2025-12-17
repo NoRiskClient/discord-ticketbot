@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew build:*)",
+      "Bash(./gradlew run:*)",
+      "Bash(./gradlew shadowJar:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(java:*)",
+      "Bash(cat:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:central.sonatype.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:repo1.maven.org)",
+      "Bash(./gradlew dependencies:*)",
+      "Bash(dir \"%USERPROFILE%\\.gradle\\caches\\modules-2\\files-2.1\\io.github.skywolfxp\" /s /b)",
+      "Bash(curl:*)",
+      "Bash(unzip:*)",
+      "WebFetch(domain:jitpack.io)"
+    ]
+  }
+}

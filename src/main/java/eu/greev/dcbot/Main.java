@@ -118,6 +118,7 @@ public class Main {
                 .addSubcommands(new SubcommandData("remove", "Remove a User from this ticket")
                         .addOption(OptionType.USER, "member", "The user removing from the current ticket", true))
                 .addSubcommands(new SubcommandData("close", "Close this ticket"))
+                .addSubcommands(new SubcommandData("force-close", "Force close this ticket without rating"))
                 .addSubcommands(new SubcommandData("claim", "Claim this ticket"))
                 .addSubcommands(new SubcommandData("set-owner", "Set the new owner of the ticket")
                         .addOption(OptionType.USER, "member", "The new owner"))
@@ -167,6 +168,7 @@ public class Main {
 
         registerInteraction("claim", new TicketClaim(jda, config, wrongChannel, missingPerm, ticketService));
         registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService));
+        registerInteraction("force-close", new ForceClose(config, ticketService, missingPerm, wrongChannel, jda));
 
         registerInteraction("ticket-confirm", new TicketConfirm(ticketService));
         registerInteraction("ticket-confirm-message", new TicketConfirmMessage());

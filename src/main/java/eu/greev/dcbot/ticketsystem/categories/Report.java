@@ -61,4 +61,9 @@ public class Report implements ICategory {
 
         return map;
     }
+
+    @Override
+    public boolean isSensitive() {
+        return true;
+    }
 }

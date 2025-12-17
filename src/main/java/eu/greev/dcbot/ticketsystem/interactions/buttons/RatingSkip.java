@@ -62,7 +62,7 @@ public class RatingSkip extends AbstractButton {
         }
 
         // Send skip notification (with transcript but no rating)
-        sendSkipNotification(ticket);
+        String transcriptUrl = sendSkipNotification(ticket);
 
         // Reset pending rating state
         ticket.setPendingRating(false);
@@ -84,20 +84,16 @@ public class RatingSkip extends AbstractButton {
         }
 
         if (pendingCloser != null) {
-            ticketService.closeTicket(ticket, false, pendingCloser, null);
+            ticketService.closeTicket(ticket, false, pendingCloser, null, transcriptUrl);
         } else {
             Member owner = jda.getGuildById(config.getServerId()).getMember(ticket.getOwner());
             if (owner != null) {
-                ticketService.closeTicket(ticket, false, owner, null);
+                ticketService.closeTicket(ticket, false, owner, null, transcriptUrl);
             }
         }
     }
 
-    private void sendSkipNotification(Ticket ticket) {
-        if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {
-            return;
-        }
-
+    private String sendSkipNotification(Ticket ticket) {
         // Generate HTML transcript and upload to log channel to get URL
         String transcriptUrl = null;
         try {
@@ -117,6 +113,10 @@ public class RatingSkip extends AbstractButton {
             log.error("Failed to generate/upload HTML transcript for ticket #{}", ticket.getId(), e);
         }
 
+        if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {
+            return transcriptUrl;
+        }
+
         EmbedBuilder notification = new EmbedBuilder()
                 .setColor(Color.GRAY)
                 .setTitle("Ticket #" + ticket.getId() + " closed")
@@ -124,7 +124,8 @@ public class RatingSkip extends AbstractButton {
                 .setThumbnail(ticket.getSupporter().getEffectiveAvatarUrl())
                 .setFooter(config.getServerName(), config.getServerLogo());
 
-        if (transcriptUrl != null) {
+        // Only add transcript link for non-sensitive categories
+        if (transcriptUrl != null && !ticket.getCategory().isSensitive()) {
             notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
         }
 
@@ -134,5 +135,7 @@ public class RatingSkip extends AbstractButton {
                 channel.sendMessageEmbeds(notification.build()).queue();
             }
         }
+
+        return transcriptUrl;
     }
 }

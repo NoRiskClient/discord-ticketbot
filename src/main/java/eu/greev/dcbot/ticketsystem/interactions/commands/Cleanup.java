@@ -19,7 +19,7 @@ public class Cleanup extends AbstractCommand {
     @Override
     public void execute(Event evt) {
         SlashCommandInteractionEvent event = (SlashCommandInteractionEvent) evt;
-        if (!event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
+        if (!hasStaffPermission(event.getMember())) {
             event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
             return;
         }

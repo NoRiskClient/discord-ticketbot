@@ -196,6 +196,10 @@ public class TicketService {
     }
 
     public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message) {
+        closeTicket(ticket, wasAccident, closer, message, null);
+    }
+
+    public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message, String existingTranscriptUrl) {
         Transcript transcript = ticket.getTranscript();
         int ticketId = ticket.getId();
         ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message).setClosedAt(Instant.now().getEpochSecond());
@@ -215,23 +219,25 @@ public class TicketService {
 
         transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getUser().getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
 
-        // Generate HTML transcript and upload to log channel to get URL
-        String transcriptUrl = null;
-        try {
-            if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
-                FileUpload htmlTranscriptUpload = DiscordHtmlTranscripts.getInstance()
-                        .createTranscript(ticket.getTextChannel(), "transcript-" + ticketId + ".html");
+        // Use existing transcript URL if provided, otherwise generate new one
+        String transcriptUrl = existingTranscriptUrl;
+        if (transcriptUrl == null) {
+            try {
+                if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
+                    FileUpload htmlTranscriptUpload = DiscordHtmlTranscripts.getInstance()
+                            .createTranscript(ticket.getTextChannel(), "transcript-" + ticketId + ".html");
 
-                var logChannel = jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel());
-                if (logChannel != null) {
-                    var uploadMessage = logChannel.sendFiles(htmlTranscriptUpload).complete();
-                    if (!uploadMessage.getAttachments().isEmpty()) {
-                        transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                    var logChannel = jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel());
+                    if (logChannel != null) {
+                        var uploadMessage = logChannel.sendFiles(htmlTranscriptUpload).complete();
+                        if (!uploadMessage.getAttachments().isEmpty()) {
+                            transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                        }
                     }
                 }
+            } catch (Exception e) {
+                log.error("Failed to generate/upload HTML transcript for ticket #{}", ticketId, e);
             }
-        } catch (Exception e) {
-            log.error("Failed to generate/upload HTML transcript for ticket #{}", ticketId, e);
         }
 
         EmbedBuilder builder = new EmbedBuilder().setTitle("Ticket " + ticketId)
