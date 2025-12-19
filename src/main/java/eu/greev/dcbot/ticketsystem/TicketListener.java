@@ -70,6 +70,11 @@ public class TicketListener extends ListenerAdapter {
                 messageBuilder.addContent(ticket.getSupporter().getAsMention());
             }
             ticket.getTextChannel().sendMessage(messageBuilder.build()).queue();
+
+            if (ticket.isPendingRating()) {
+                ticket.setPendingRating(false);
+                ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Closed without rating (member left the server)");
+            }
         }
     }
 
@@ -146,7 +151,8 @@ public class TicketListener extends ListenerAdapter {
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        if (event.getSelectMenu().getId() == null || !event.getSelectMenu().getId().equals("ticket-create-topic")) return;
+        if (event.getSelectMenu().getId() == null || !event.getSelectMenu().getId().equals("ticket-create-topic"))
+            return;
         Main.INTERACTIONS.get(event.getSelectedOptions().get(0).getValue()).execute(event);
     }
 
@@ -244,7 +250,8 @@ public class TicketListener extends ListenerAdapter {
 
     @Override
     public void onMessageDelete(@NotNull MessageDeleteEvent event) {
-        if (!event.isFromGuild() || !event.getChannelType().equals(ChannelType.TEXT) || ticketService.getTicketByChannelId(event.getChannel().getIdLong()) == null) return;
+        if (!event.isFromGuild() || !event.getChannelType().equals(ChannelType.TEXT) || ticketService.getTicketByChannelId(event.getChannel().getIdLong()) == null)
+            return;
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         if (event.getMessageId().equals(ticket.getBaseMessage())) return;
 
@@ -274,10 +281,10 @@ public class TicketListener extends ListenerAdapter {
             EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                     .setColor(Color.decode(config.getColor()))
                     .addField(new MessageEmbed.Field("**Support request**", """
-                        You have questions or a problem?
-                        Just click the one of the buttons below.
-                        We will try to handle your ticket as soon as possible.
-                        """, false));
+                            You have questions or a problem?
+                            Just click the one of the buttons below.
+                            We will try to handle your ticket as soon as possible.
+                            """, false));
 
             StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
                     .setPlaceholder("Select your ticket topic");

@@ -6,6 +6,7 @@ import eu.greev.dcbot.utils.Config;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.IMentionable;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
@@ -348,7 +349,7 @@ public class RatingStatsScheduler {
     private String getUserMention(String id) {
         try {
             return Optional.ofNullable(jda.retrieveUserById(id).complete())
-                    .map(u -> u.getAsMention())
+                    .map(IMentionable::getAsMention)
                     .orElse("<@" + id + ">");
         } catch (Exception e) {
             return "<@" + id + ">";
