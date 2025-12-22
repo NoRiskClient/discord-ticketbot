@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
@@ -120,14 +121,17 @@ public class TicketClose implements Interaction {
     }
 
     public void executeClose(ButtonInteractionEvent event, int ticketId) {
+        // Defer reply immediately to avoid 3-second timeout
+        event.deferReply(true).queue();
+
         Ticket ticket = ticketService.getTicketByTicketId(ticketId);
         if (ticket == null) {
-            event.reply("Ticket not found.").setEphemeral(true).queue();
+            event.getHook().sendMessage("Ticket not found.").setEphemeral(true).queue();
             return;
         }
 
         if (ticket.isPendingRating()) {
-            event.reply("This ticket is already being closed.").setEphemeral(true).queue();
+            event.getHook().sendMessage("This ticket is already being closed.").setEphemeral(true).queue();
             return;
         }
 
@@ -137,7 +141,7 @@ public class TicketClose implements Interaction {
                     .setColor(Color.GREEN)
                     .setFooter(config.getServerName(), config.getServerLogo())
                     .addField("Ticket closed", "This unclaimed ticket has been closed.", false);
-            event.replyEmbeds(confirmation.build()).setEphemeral(true).queue();
+            event.getHook().sendMessageEmbeds(confirmation.build()).setEphemeral(true).queue();
             ticketService.closeTicket(ticket, false, event.getMember(), null);
             return;
         }
@@ -174,10 +178,10 @@ public class TicketClose implements Interaction {
         }
 
         // Send rating request
-        sendRatingRequest(ticket, event);
+        sendRatingRequest(ticket, event.getHook());
     }
 
-    private void sendRatingRequest(Ticket ticket, IReplyCallback event) {
+    private void sendRatingRequest(Ticket ticket, InteractionHook hook) {
         EmbedBuilder ratingEmbed = new EmbedBuilder()
                 .setColor(Color.decode(config.getColor()))
                 .setTitle("Rate Your Support Experience")
@@ -204,21 +208,21 @@ public class TicketClose implements Interaction {
                                         .setColor(Color.GREEN)
                                         .setFooter(config.getServerName(), config.getServerLogo())
                                         .addField("Ticket closed", "The ticket has been closed and " + ticket.getOwner().getAsMention() + " has been asked to rate their experience.", false);
-                                event.replyEmbeds(confirmation.build()).setEphemeral(true).queue();
+                                hook.sendMessageEmbeds(confirmation.build()).setEphemeral(true).queue();
 
                                 EmbedBuilder waitingEmbed = new EmbedBuilder()
                                         .setColor(Color.YELLOW)
                                         .setDescription("⏳ Waiting for " + ticket.getOwner().getAsMention() + " to submit their rating...");
                                 ticket.getTextChannel().sendMessageEmbeds(waitingEmbed.build()).queue();
                             },
-                            error -> handleDMFailure(ticket, event)
+                            error -> handleDMFailure(ticket, hook)
                     );
         } catch (Exception e) {
-            handleDMFailure(ticket, event);
+            handleDMFailure(ticket, hook);
         }
     }
 
-    private void handleDMFailure(Ticket ticket, IReplyCallback event) {
+    private void handleDMFailure(Ticket ticket, InteractionHook hook) {
         EmbedBuilder ratingEmbed = new EmbedBuilder()
                 .setColor(Color.decode(config.getColor()))
                 .setTitle("Rate Your Support Experience")
@@ -243,7 +247,7 @@ public class TicketClose implements Interaction {
                 .setColor(Color.YELLOW)
                 .setFooter(config.getServerName(), config.getServerLogo())
                 .addField("Ticket closed", "Could not send DM to ticket owner. Rating request has been sent in this channel.", false);
-        event.replyEmbeds(confirmation.build()).setEphemeral(true).queue();
+        hook.sendMessageEmbeds(confirmation.build()).setEphemeral(true).queue();
     }
 
     /**

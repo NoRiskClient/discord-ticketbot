@@ -128,19 +128,29 @@ public class RatingModal implements Interaction {
         String transcriptUrl = null;
         try {
             if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
-                FileUpload transcriptUpload = DiscordHtmlTranscripts.getInstance()
-                        .createTranscript(ticket.getTextChannel(), "transcript-" + ticket.getId() + ".html");
+                // Fetch messages first to check if channel has content
+                var messages = ticket.getTextChannel().getIterableHistory()
+                        .takeAsync(1000)
+                        .get();
 
-                var logChannel = jda.getTextChannelById(config.getLogChannel());
-                if (logChannel != null) {
-                    var uploadMessage = logChannel.sendFiles(transcriptUpload).complete();
-                    if (!uploadMessage.getAttachments().isEmpty()) {
-                        transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                if (messages != null && !messages.isEmpty()) {
+                    FileUpload transcriptUpload = DiscordHtmlTranscripts.getInstance()
+                            .createTranscript(ticket.getTextChannel(), "transcript-" + ticket.getId() + ".html");
+
+                    var logChannel = jda.getTextChannelById(config.getLogChannel());
+                    if (logChannel != null) {
+                        var uploadMessage = logChannel.sendFiles(transcriptUpload).complete();
+                        if (!uploadMessage.getAttachments().isEmpty()) {
+                            transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                        }
                     }
+                } else {
+                    log.warn("No messages found in ticket #{} channel, skipping transcript generation", ticket.getId());
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to generate/upload HTML transcript for ticket #{}", ticket.getId(), e);
+            log.error("Failed to generate/upload HTML transcript for ticket #{}: {}", ticket.getId(), e.getMessage());
+            // Continue without transcript - don't let this block the rating notification
         }
 
         if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {

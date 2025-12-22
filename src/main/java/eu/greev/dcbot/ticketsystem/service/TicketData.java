@@ -263,4 +263,17 @@ public class TicketData {
                     return map;
                 }));
     }
+
+    /**
+     * Marks a stale ticket as closed in the database.
+     * Used when the ticket's Discord channel no longer exists.
+     */
+    public void markStaleTicketAsClosed(int ticketId) {
+        long closedAt = Instant.now().getEpochSecond();
+        jdbi.useHandle(handle -> handle.createUpdate(
+                "UPDATE tickets SET isOpen = false, isWaiting = false, closeMessage = 'Auto-closed: Channel not found', closedAt = ? WHERE ticketID = ?")
+                .bind(0, closedAt)
+                .bind(1, ticketId)
+                .execute());
+    }
 }

@@ -59,8 +59,9 @@ public class HourlyScheduler {
             log.debug("Checking ticket ID: {}", ticketId);
             Ticket ticket = ticketService.getTicketByTicketId(ticketId);
 
-            if (ticket == null) {
-                log.warn("Ticket ID {} not found, skipping...", ticketId);
+            if (ticket == null || ticket.getTextChannel() == null) {
+                log.warn("Ticket ID {} not found or channel missing, marking as closed...", ticketId);
+                ticketData.markStaleTicketAsClosed(ticketId);
                 continue;
             }
 
