@@ -5,8 +5,8 @@ plugins {
     id("com.gradleup.shadow") version "8.3.5"
 }
 
-group = "eu.greev"
-version = "1.3.1"
+group = "gg.norisk"
+version = "2.0.0"
 
 repositories {
     mavenCentral()
@@ -37,7 +37,7 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<ShadowJar> {
     manifest {
-        attributes["Main-Class"] = "eu.greev.dcbot.Main"
+        attributes["Main-Class"] = "gg.norisk.ticketbot.Main"
     }
     archiveFileName.set("discord-ticketbot.jar")
 }
