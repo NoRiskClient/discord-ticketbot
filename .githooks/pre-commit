@@ -1,0 +1,9 @@
+#! /bin/sh
+
+./gradlew spotlessApply
+
+echo "✅ Applied code formatting."
+
+./gradlew checkAnnotations
+
+exit $?
