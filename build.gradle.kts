@@ -3,6 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     java
     id("com.gradleup.shadow") version "8.3.5"
+    id("com.diffplug.spotless") version "8.1.0"
 }
 
 group = "gg.norisk"
@@ -40,4 +41,10 @@ tasks.withType<ShadowJar> {
         attributes["Main-Class"] = "gg.norisk.ticketbot.Main"
     }
     archiveFileName.set("discord-ticketbot.jar")
+}
+
+spotless {
+    java {
+        googleJavaFormat("1.33.0")
+    }
 }
