@@ -20,7 +20,6 @@ dependencies {
         exclude("com.google.crypto.tink", "tink")
     }
     implementation("org.jdbi", "jdbi3-oracle12", "3.44.0")
-    implementation("org.slf4j", "slf4j-log4j12", "2.0.17")
     implementation("org.xerial", "sqlite-jdbc", "3.50.3.0")
     implementation("org.apache.logging.log4j", "log4j-api", "2.25.1")
     implementation("org.apache.logging.log4j", "log4j-core", "2.25.1")
