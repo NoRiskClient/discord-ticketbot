@@ -14,15 +14,15 @@ public class Database {
   private Jdbi jdbi;
 
   public void initialize() throws IOException {
-    SQLiteDataSource ds = new SQLiteDataSource();
-    ds.setUrl(url);
-    jdbi = Jdbi.create(ds);
+    SQLiteDataSource dataSource = new SQLiteDataSource();
+    dataSource.setUrl(url);
+    jdbi = Jdbi.create(dataSource);
 
-    try (InputStream is = getClass().getClassLoader().getResourceAsStream("dbsetup.sql")) {
-      if (is == null) {
+    try (InputStream stream = getClass().getClassLoader().getResourceAsStream("dbsetup.sql")) {
+      if (stream == null) {
         throw new IOException("Database setup script not found");
       }
-      String sql = new String(is.readAllBytes());
+      String sql = new String(stream.readAllBytes());
       jdbi.useHandle(handle -> handle.execute(sql));
     }
 
