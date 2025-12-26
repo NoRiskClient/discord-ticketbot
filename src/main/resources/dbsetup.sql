@@ -30,7 +30,9 @@ CREATE TABLE IF NOT EXISTS tickets
 
     isOpen                 BOOL    DEFAULT 1,
 
-    closer                 VARCHAR DEFAULT ""
+    closer                 VARCHAR DEFAULT "",
+
+    closedAt               BIGINT  DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS messages
 (
@@ -72,4 +74,22 @@ CREATE TABLE IF NOT EXISTS overflow_categories (
     categoryID     VARCHAR PRIMARY KEY  NOT NULL,
 
     ticketCategory VARCHAR DEFAULT NULL NULL
+);
+CREATE TABLE IF NOT EXISTS ratings
+(
+    ratingID    INTEGER PRIMARY KEY NOT NULL,
+
+    ticketID    INTEGER             NOT NULL,
+
+    ownerID     VARCHAR             NOT NULL,
+
+    supporterID VARCHAR             NOT NULL,
+
+    rating      INTEGER             NOT NULL CHECK (rating >= 1 AND rating <= 5),
+
+    message     VARCHAR DEFAULT NULL,
+
+    createdAt   BIGINT              NOT NULL,
+
+    FOREIGN KEY (ticketID) REFERENCES tickets (ticketID)
 );

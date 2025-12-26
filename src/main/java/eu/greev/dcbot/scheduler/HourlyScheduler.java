@@ -52,13 +52,16 @@ public class HourlyScheduler {
         int userReminders = 0;
         int autoClosures = 0;
         int supporterReminders = 0;
+        int ratingReminders = 0;
+        int ratingAutoClosures = 0;
 
         for (Integer ticketId : ticketsIds) {
             log.debug("Checking ticket ID: {}", ticketId);
             Ticket ticket = ticketService.getTicketByTicketId(ticketId);
 
-            if (ticket == null) {
-                log.warn("Ticket ID {} not found, skipping...", ticketId);
+            if (ticket == null || ticket.getTextChannel() == null) {
+                log.warn("Ticket ID {} not found or channel missing, marking as closed...", ticketId);
+                ticketData.markStaleTicketAsClosed(ticketId);
                 continue;
             }
 
@@ -125,6 +128,37 @@ public class HourlyScheduler {
                 supporterReminders++;
             }
 
+            // Rating reminder logic
+            if (ticket.isPendingRating() && ticket.getPendingRatingSince() != null) {
+                int maxReminders = config.getRatingMaxReminders();
+                int intervalHours = config.getRatingReminderIntervalHours();
+
+                boolean shouldAutoCloseRating = ticket.getRatingRemindersSent() >= maxReminders;
+                boolean shouldRemindRating = !shouldAutoCloseRating &&
+                        ticket.getPendingRatingSince()
+                                .plus((long) intervalHours * (ticket.getRatingRemindersSent() + 1), ChronoUnit.HOURS)
+                                .isBefore(Instant.now());
+
+                if (shouldAutoCloseRating) {
+                    ticket.setPendingRating(false);
+                    ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Closed without rating (no response)");
+                    ratingAutoClosures++;
+                } else if (shouldRemindRating) {
+                    EmbedBuilder reminderEmbed = new EmbedBuilder()
+                            .setColor(Color.ORANGE)
+                            .setTitle(String.format("⏰ Rating Reminder (%d/%d)", ticket.getRatingRemindersSent() + 1, maxReminders))
+                            .setDescription(ticket.getOwner().getAsMention() + ", please rate your support experience!\nThe ticket will be closed automatically if you don't respond.")
+                            .setFooter(config.getServerName(), config.getServerLogo());
+
+                    ticket.getTextChannel().sendMessage(ticket.getOwner().getAsMention())
+                            .setEmbeds(reminderEmbed.build())
+                            .queue();
+
+                    ticket.setRatingRemindersSent(ticket.getRatingRemindersSent() + 1);
+                    ratingReminders++;
+                }
+            }
+
             log.debug("Should remind: {}, Should close: {}, Should remind supporter: {}", shouldRemind, shouldClose, shouldRemindSupporter);
 
             try {
@@ -134,11 +168,11 @@ public class HourlyScheduler {
             }
         }
 
-        sendProcessingSummary(userReminders, supporterReminders, autoClosures, ticketsIds.size());
+        sendProcessingSummary(userReminders, supporterReminders, autoClosures, ratingReminders, ratingAutoClosures, ticketsIds.size());
     }
 
-    private void sendProcessingSummary(int userReminders, int supporterReminders, int autoClosures, int totalTickets) {
-        if (config.getLogChannel() != 0 && (userReminders != 0 || supporterReminders != 0 || autoClosures != 0)) {
+    private void sendProcessingSummary(int userReminders, int supporterReminders, int autoClosures, int ratingReminders, int ratingAutoClosures, int totalTickets) {
+        if (config.getLogChannel() != 0 && (userReminders != 0 || supporterReminders != 0 || autoClosures != 0 || ratingReminders != 0 || ratingAutoClosures != 0)) {
             EmbedBuilder summaryBuilder = new EmbedBuilder()
                     .setTitle("📊 Hourly Ticket Processing Summary")
                     .setColor(Color.decode(config.getColor()))
@@ -146,6 +180,8 @@ public class HourlyScheduler {
                     .addField("User Reminders Sent", "`" + userReminders + "`", false)
                     .addField("Supporter Reminders Sent", "`" + supporterReminders + "`", false)
                     .addField("Auto-Closures", "`" + autoClosures + "`", false)
+                    .addField("Rating Reminders Sent", "`" + ratingReminders + "`", false)
+                    .addField("Rating Auto-Closures", "`" + ratingAutoClosures + "`", false)
                     .setFooter(config.getServerName(), config.getServerLogo());
 
             try {

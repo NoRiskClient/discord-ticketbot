@@ -24,7 +24,7 @@ public class SetWaiting extends AbstractCommand {
     public void execute(Event evt) {
         SlashCommandInteractionEvent event = (SlashCommandInteractionEvent) evt;
         Member member = event.getMember();
-        if (!event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
+        if (!hasStaffPermission(event.getMember())) {
             event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
             return;
         }

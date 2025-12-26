@@ -38,6 +38,11 @@ public class Ticket {
     @Getter private TextChannel textChannel;
     @Getter private ThreadChannel threadChannel;
     @Getter private boolean isOpen;
+    @Getter private Long closedAt;
+    @Getter private boolean pendingRating;
+    @Getter private User pendingCloser;
+    @Getter private Instant pendingRatingSince;
+    @Getter private int ratingRemindersSent;
     private final TicketData ticketData;
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(10);
 
@@ -61,6 +66,12 @@ public class Ticket {
 
     public Ticket setOpen(boolean isOpen) {
         this.isOpen = isOpen;
+        this.save();
+        return this;
+    }
+
+    public Ticket setClosedAt(Long closedAt) {
+        this.closedAt = closedAt;
         this.save();
         return this;
     }
@@ -136,5 +147,25 @@ public class Ticket {
 
     public void save() {
         EXECUTOR.execute(() -> ticketData.saveTicket(this));
+    }
+
+    public Ticket setPendingRating(boolean pendingRating) {
+        this.pendingRating = pendingRating;
+        return this;
+    }
+
+    public Ticket setPendingCloser(User pendingCloser) {
+        this.pendingCloser = pendingCloser;
+        return this;
+    }
+
+    public Ticket setPendingRatingSince(Instant pendingRatingSince) {
+        this.pendingRatingSince = pendingRatingSince;
+        return this;
+    }
+
+    public Ticket setRatingRemindersSent(int ratingRemindersSent) {
+        this.ratingRemindersSent = ratingRemindersSent;
+        return this;
     }
 }

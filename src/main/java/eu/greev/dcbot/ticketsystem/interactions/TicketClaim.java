@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -43,7 +44,9 @@ public class TicketClaim implements Interaction {
             event.replyEmbeds(error.build()).setEphemeral(true).queue();
             return;
         }
-        if (!event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()))) {
+        boolean isStaff = event.getMember().getRoles().contains(jda.getRoleById(config.getStaffId()));
+        boolean isAdmin = event.getMember().hasPermission(Permission.ADMINISTRATOR);
+        if (!config.isDevMode() && !isStaff && !isAdmin) {
             event.replyEmbeds(missingPerm.setFooter(config.getServerName(), config.getServerLogo()).build()).setEphemeral(true).queue();
             return;
         }

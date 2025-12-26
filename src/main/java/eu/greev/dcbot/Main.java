@@ -2,13 +2,16 @@ package eu.greev.dcbot;
 
 import eu.greev.dcbot.scheduler.DailyScheduler;
 import eu.greev.dcbot.scheduler.HourlyScheduler;
+import eu.greev.dcbot.scheduler.RatingStatsScheduler;
 import eu.greev.dcbot.ticketsystem.TicketListener;
 import eu.greev.dcbot.ticketsystem.categories.*;
 import eu.greev.dcbot.ticketsystem.interactions.*;
 import eu.greev.dcbot.ticketsystem.interactions.buttons.*;
 import eu.greev.dcbot.ticketsystem.interactions.commands.*;
+import eu.greev.dcbot.ticketsystem.interactions.modals.RatingModal;
 import eu.greev.dcbot.ticketsystem.interactions.modals.TicketConfirmMessageModal;
 import eu.greev.dcbot.ticketsystem.interactions.modals.TicketModal;
+import eu.greev.dcbot.ticketsystem.service.RatingData;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
@@ -54,6 +57,8 @@ public class Main {
     private static String createCommandId;
     @Getter
     private static String getTicketCommandId;
+    @Getter
+    private static RatingStatsScheduler ratingStatsScheduler;
     private static Jdbi jdbi;
 
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -93,6 +98,7 @@ public class Main {
         initDatasource();
 
         TicketData ticketData = new TicketData(jda, jdbi);
+        RatingData ratingData = new RatingData(jdbi);
         TicketService ticketService = new TicketService(jda, config, jdbi, ticketData);
         jda.addEventListener(new TicketListener(ticketService, config, jda));
 
@@ -100,6 +106,7 @@ public class Main {
         registerCategory(new Report(), config, ticketService, ticketData);
         registerCategory(new Creator(), config, ticketService, ticketData);
         registerCategory(new Bug(), config, ticketService, ticketData);
+        registerCategory(new CrashReport(), config, ticketService, ticketData);
         registerCategory(new Payment(), config, ticketService, ticketData);
         registerCategory(new Security(), config, ticketService, ticketData);
 
@@ -111,6 +118,7 @@ public class Main {
                 .addSubcommands(new SubcommandData("remove", "Remove a User from this ticket")
                         .addOption(OptionType.USER, "member", "The user removing from the current ticket", true))
                 .addSubcommands(new SubcommandData("close", "Close this ticket"))
+                .addSubcommands(new SubcommandData("force-close", "Force close this ticket without rating"))
                 .addSubcommands(new SubcommandData("claim", "Claim this ticket"))
                 .addSubcommands(new SubcommandData("set-owner", "Set the new owner of the ticket")
                         .addOption(OptionType.USER, "member", "The new owner"))
@@ -135,6 +143,9 @@ public class Main {
                                 .addOption(OptionType.USER, "staff", "Staff member to add", true))
                         .addSubcommands(new SubcommandData("join", "Join the ticket thread")))
                 .addSubcommands(new SubcommandData("clean-up", "Run the daily cleanup manually"))
+                .addSubcommands(new SubcommandData("rating-stats", "Show rating statistics"))
+                .addSubcommands(new SubcommandData("debug-stats", "Preview daily/weekly/monthly stats")
+                        .addOption(OptionType.STRING, "type", "Report type: daily, weekly, monthly", true))
         ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
@@ -146,6 +157,8 @@ public class Main {
 
         new HourlyScheduler(config, ticketService, ticketData, jda).start();
         new DailyScheduler(ticketService).start();
+        ratingStatsScheduler = new RatingStatsScheduler(config, ratingData, ticketData, jda);
+        ratingStatsScheduler.start();
 
         EmbedBuilder missingPerm = new EmbedBuilder().setColor(Color.RED)
                 .addField("❌ **Missing permission**", "You are not permitted to use this command!", false);
@@ -155,6 +168,7 @@ public class Main {
 
         registerInteraction("claim", new TicketClaim(jda, config, wrongChannel, missingPerm, ticketService));
         registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService));
+        registerInteraction("force-close", new ForceClose(config, ticketService, missingPerm, wrongChannel, jda));
 
         registerInteraction("ticket-confirm", new TicketConfirm(ticketService));
         registerInteraction("ticket-confirm-message", new TicketConfirmMessage());
@@ -183,8 +197,14 @@ public class Main {
 
         registerInteraction("clean-up", new Cleanup(config, ticketService, missingPerm, jda));
 
-        log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
+        registerInteraction("ticket-confirm-rating", new TicketConfirmRating(ticketService, config));
+        registerInteraction("rating-select", new RatingSelect(ticketService));
+        registerInteraction("rating-modal", new RatingModal(ticketService, ratingData, config, jda));
+        registerInteraction("rating-skip", new RatingSkip(ticketService, config, jda));
+        registerInteraction("rating-stats", new RatingStats(config, ticketService, missingPerm, jda, ratingData));
+        registerInteraction("debug-stats", new DebugStats(config, ticketService, missingPerm, jda));
 
+        log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 
     }
 
@@ -201,6 +221,14 @@ public class Main {
             System.exit(1);
         }
         Arrays.stream(setup.split(";")).toList().forEach(query -> jdbi.withHandle(h -> h.createUpdate(query).execute()));
+
+        // Migration: Add closedAt column if it doesn't exist
+        try {
+            jdbi.withHandle(h -> h.createUpdate("ALTER TABLE tickets ADD COLUMN closedAt BIGINT DEFAULT NULL").execute());
+            log.info("Added closedAt column to tickets table");
+        } catch (Exception e) {
+            // Column already exists, ignore
+        }
     }
 
     private static void registerInteraction(String identifier, Interaction interaction) {

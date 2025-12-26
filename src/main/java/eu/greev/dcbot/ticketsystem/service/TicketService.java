@@ -1,5 +1,6 @@
 package eu.greev.dcbot.ticketsystem.service;
 
+import me.ryzeon.transcripts.DiscordHtmlTranscripts;
 import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Edit;
@@ -71,7 +72,7 @@ public class TicketService {
             }
         }
 
-        if (openTickets >= config.getMaxTicketsPerUser()) {
+        if (!config.isDevMode() && openTickets >= config.getMaxTicketsPerUser()) {
             return Optional.of("You have reached the maximum number of open tickets (" + config.getMaxTicketsPerUser() + "). Please close an existing ticket before opening a new one.");
         }
 
@@ -195,9 +196,13 @@ public class TicketService {
     }
 
     public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message) {
+        closeTicket(ticket, wasAccident, closer, message, null);
+    }
+
+    public void closeTicket(Ticket ticket, boolean wasAccident, Member closer, String message, String existingTranscriptUrl) {
         Transcript transcript = ticket.getTranscript();
         int ticketId = ticket.getId();
-        ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message);
+        ticket.setCloser(closer.getUser()).setOpen(false).setCloseMessage(message).setClosedAt(Instant.now().getEpochSecond());
         if (wasAccident) {
             ticket.getTextChannel().delete().queue();
             jdbi.withHandle(handle -> handle.createUpdate("DELETE FROM tickets WHERE ticketID=?").bind(0, ticketId).execute());
@@ -214,6 +219,37 @@ public class TicketService {
 
         transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getUser().getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
 
+        // Use existing transcript URL if provided, otherwise generate new one
+        String transcriptUrl = existingTranscriptUrl;
+        if (transcriptUrl == null) {
+            try {
+                if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
+                    // Fetch messages first to avoid NPE in library when handling message references
+                    var messages = ticket.getTextChannel().getIterableHistory()
+                            .takeAsync(1000)
+                            .get();
+
+                    if (messages != null && !messages.isEmpty()) {
+                        FileUpload htmlTranscriptUpload = DiscordHtmlTranscripts.getInstance()
+                                .createTranscript(ticket.getTextChannel(), "transcript-" + ticketId + ".html");
+
+                        var logChannel = jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel());
+                        if (logChannel != null) {
+                            var uploadMessage = logChannel.sendFiles(htmlTranscriptUpload).complete();
+                            if (!uploadMessage.getAttachments().isEmpty()) {
+                                transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
+                            }
+                        }
+                    } else {
+                        log.warn("No messages found in ticket #{} channel, skipping transcript generation", ticketId);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Failed to generate/upload HTML transcript for ticket #{}: {}", ticketId, e.getMessage());
+                // Continue without transcript - don't let this block ticket closure
+            }
+        }
+
         EmbedBuilder builder = new EmbedBuilder().setTitle("Ticket " + ticketId)
                 .addField("Closed by", closer.getAsMention(), false);
 
@@ -221,22 +257,27 @@ public class TicketService {
             builder.addField("Message", message, true);
         }
 
-        builder.addField("Text Transcript⠀⠀⠀⠀⠀⠀⠀⠀", "See attachment", false)
-                .setColor(Color.decode(config.getColor()))
+        if (transcriptUrl != null) {
+            builder.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
+        }
+
+        builder.setColor(Color.decode(config.getColor()))
                 .setFooter(config.getServerName(), config.getServerLogo());
 
         if (ticket.getOwner().getMutualGuilds().contains(jda.getGuildById(config.getServerId()))) {
             try {
                 ticket.getOwner().openPrivateChannel()
-                        .flatMap(channel -> channel.sendMessageEmbeds(builder.build()).setFiles(FileUpload.fromData(transcript.toFile(ticketId))))
+                        .flatMap(channel -> channel.sendMessageEmbeds(builder.build()))
                         .complete();
             } catch (ErrorResponseException e) {
                 log.warn("Couldn't send [{}] their transcript since an error occurred:\nMeaning:{} | Message:{} | Response:{}", ticket.getOwner().getName(), e.getMeaning(), e.getMessage(), e.getErrorResponse());
             }
         }
 
-        if (config.getLogChannel() != 0) {
-            jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel()).sendMessageEmbeds(builder.build()).setFiles(FileUpload.fromData(transcript.toFile(ticketId))).queue();
+        if (config.getLogChannel() != 0 && transcriptUrl != null) {
+            jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel())
+                    .sendMessageEmbeds(builder.build())
+                    .queue();
         }
 
         saveTranscriptChanges(ticket.getTranscript().getRecentChanges());
@@ -267,7 +308,7 @@ public class TicketService {
     }
 
     public boolean claim(Ticket ticket, User supporter) {
-        if (supporter == ticket.getOwner()) return false;
+        if (!config.isDevMode() && supporter == ticket.getOwner()) return false;
 
         ticket.setSupporter(supporter);
 
@@ -417,15 +458,22 @@ public class TicketService {
     public void toggleWaiting(Ticket ticket, boolean waiting) {
         TextChannelManager manager = ticket.getTextChannel().getManager();
         ticket.setWaiting(waiting);
-        try {
-            manager.setName(generateChannelName(ticket, false)).complete();
-        } catch (ErrorResponseException e) {
-            if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
-                manager.setName(generateChannelName(ticket, true)).complete();
-            } else {
-                log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e);
-            }
-        }
+        String channelName = generateChannelName(ticket, false);
+
+        manager.setName(channelName).queue(
+                success -> log.debug("Successfully renamed ticket #{} channel to {}", ticket.getId(), channelName),
+                error -> {
+                    if (error.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
+                        String fallbackName = generateChannelName(ticket, true);
+                        manager.setName(fallbackName).queue(
+                                s -> log.debug("Successfully renamed ticket #{} channel to {} (fallback)", ticket.getId(), fallbackName),
+                                e -> log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e)
+                        );
+                    } else {
+                        log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), error);
+                    }
+                }
+        );
     }
 
     public boolean addUser(Ticket ticket, User user) {

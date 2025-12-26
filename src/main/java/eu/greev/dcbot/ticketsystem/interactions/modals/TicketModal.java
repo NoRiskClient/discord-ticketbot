@@ -43,6 +43,24 @@ public class TicketModal implements Interaction {
 
         info.replaceAll((k, v) -> escapeFormatting(v));
 
+        // Validation for CrashReport: check mclo.gs link
+        if (category.getId().equals("crashreport")) {
+            String logsUrl = event.getValue("mclogs").getAsString();
+            if (!logsUrl.contains("mclo.gs")) {
+                EmbedBuilder errorEmbed = new EmbedBuilder()
+                        .setColor(Color.RED)
+                        .setTitle("Invalid Link")
+                        .setDescription("Please provide a valid **mclo.gs** link!\n\n" +
+                                "**How to create one:**\n" +
+                                "1. Go to [mclo.gs](https://mclo.gs)\n" +
+                                "2. Upload your log file\n" +
+                                "3. Copy the link")
+                        .setFooter(config.getServerName(), config.getServerLogo());
+                event.getHook().sendMessageEmbeds(errorEmbed.build()).setEphemeral(true).queue();
+                return;
+            }
+        }
+
         Optional<String> error = ticketService.createNewTicket(info, category, event.getUser());
 
         if (error.isEmpty()) {

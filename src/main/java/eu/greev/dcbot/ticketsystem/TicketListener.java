@@ -3,6 +3,7 @@ package eu.greev.dcbot.ticketsystem;
 import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.interactions.TicketClose;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
@@ -69,6 +70,11 @@ public class TicketListener extends ListenerAdapter {
                 messageBuilder.addContent(ticket.getSupporter().getAsMention());
             }
             ticket.getTextChannel().sendMessage(messageBuilder.build()).queue();
+
+            if (ticket.isPendingRating()) {
+                ticket.setPendingRating(false);
+                ticketService.closeTicket(ticket, false, jda.getGuildById(config.getServerId()).getSelfMember(), "Closed without rating (member left the server)");
+            }
         }
     }
 
@@ -103,17 +109,50 @@ public class TicketListener extends ListenerAdapter {
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
         if (event.getButton().getId() == null) return;
-        Main.INTERACTIONS.get(event.getButton().getId()).execute(event);
+        String buttonId = event.getButton().getId();
+
+        if (buttonId.startsWith("close-confirm-")) {
+            String[] parts = buttonId.split("-");
+            if (parts.length == 3) {
+                try {
+                    int ticketId = Integer.parseInt(parts[2]);
+                    ((TicketClose) Main.INTERACTIONS.get("close")).executeClose(event, ticketId);
+                } catch (NumberFormatException e) {
+                    event.reply("Invalid button.").setEphemeral(true).queue();
+                }
+            }
+            return;
+        }
+
+        if (buttonId.startsWith("rating-skip-")) {
+            Main.INTERACTIONS.get("rating-skip").execute(event);
+            return;
+        }
+
+        if (buttonId.startsWith("rating-") && !buttonId.equals("ticket-confirm-rating")) {
+            Main.INTERACTIONS.get("rating-select").execute(event);
+            return;
+        }
+
+        Main.INTERACTIONS.get(buttonId).execute(event);
     }
 
     @Override
     public void onModalInteraction(ModalInteractionEvent event) {
-        Main.INTERACTIONS.get(event.getModalId()).execute(event);
+        String modalId = event.getModalId();
+
+        if (modalId.startsWith("rating-modal-")) {
+            Main.INTERACTIONS.get("rating-modal").execute(event);
+            return;
+        }
+
+        Main.INTERACTIONS.get(modalId).execute(event);
     }
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        if (event.getSelectMenu().getId() == null || !event.getSelectMenu().getId().equals("ticket-create-topic")) return;
+        if (event.getSelectMenu().getId() == null || !event.getSelectMenu().getId().equals("ticket-create-topic"))
+            return;
         Main.INTERACTIONS.get(event.getSelectedOptions().get(0).getValue()).execute(event);
     }
 
@@ -128,7 +167,7 @@ public class TicketListener extends ListenerAdapter {
      */
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
-        if (event.getChannelType() == ChannelType.GUILD_PRIVATE_THREAD && event.isFromGuild()
+        if (!config.isDevMode() && event.getChannelType() == ChannelType.GUILD_PRIVATE_THREAD && event.isFromGuild()
                 && ticketService.getTicketByChannelId(event.getGuildChannel().asThreadChannel().getParentMessageChannel().getIdLong()) != null) {
 
             for (Member member : event.getMessage().getMentions().getMembers()) {
@@ -148,25 +187,58 @@ public class TicketListener extends ListenerAdapter {
         if (isValid(event) || event.getAuthor().getIdLong() == jda.getSelfUser().getIdLong()) return;
 
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
+
+        // Block messages from owner while pending rating
+        if (ticket.isPendingRating() && event.getAuthor().getIdLong() == ticket.getOwner().getIdLong()) {
+            if (config.isDevMode()) {
+                // DevMode: Show info message but don't delete (admin perms bypass permission denial)
+                EmbedBuilder info = new EmbedBuilder()
+                        .setColor(Color.ORANGE)
+                        .setDescription("⚠️ **[DevMode]** " + event.getAuthor().getAsMention() + ", diese Nachricht würde normalerweise blockiert werden. Bitte bewerte erst das Ticket!")
+                        .setFooter(config.getServerName(), config.getServerLogo());
+                event.getChannel().sendMessageEmbeds(info.build())
+                        .queue(msg -> msg.delete().queueAfter(10, java.util.concurrent.TimeUnit.SECONDS));
+            } else {
+                // Production: Delete message (fallback if permission denial fails)
+                event.getMessage().delete().queue();
+                EmbedBuilder info = new EmbedBuilder()
+                        .setColor(Color.ORANGE)
+                        .setDescription("⏳ " + event.getAuthor().getAsMention() + ", bitte bewerte erst das Ticket bevor du weitere Nachrichten senden kannst!")
+                        .setFooter(config.getServerName(), config.getServerLogo());
+                event.getChannel().sendMessageEmbeds(info.build())
+                        .queue(msg -> msg.delete().queueAfter(10, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            return;
+        }
+
         if (ticket.isWaiting()) {
             ticketService.toggleWaiting(ticket, false);
             ticket.setWaitingSince(null);
             ticket.setRemindersSent(0);
         }
 
-        if (ticket.getSupporter() == null) {
-            for (Member member : event.getMessage().getMentions().getMembers()) {
-                if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
-                    event.getMessage().delete().queue();
+        if (!config.isDevMode() && ticket.getSupporter() == null) {
+            // Skip check for bots, staff members and admins
+            boolean isBot = event.getAuthor().isBot();
+            boolean isStaff = event.getMember() != null &&
+                    event.getMember().getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId());
+            boolean isAdmin = event.getMember() != null &&
+                    event.getMember().hasPermission(Permission.ADMINISTRATOR);
 
-                    EmbedBuilder builder = new EmbedBuilder()
-                            .setColor(Color.RED)
-                            .setTitle("Please do not ping staff members!")
-                            .setDescription("\uD83C\uDDEC\uD83C\uDDE7 A member of our staff will assist you shortly, thank you for your patience.\n\n\uD83C\uDDE9\uD83C\uDDEA Ein Teammitglied wird sich in Kürze um dein Ticket kümmern, vielen Dank für deine Geduld.")
-                            .setFooter(config.getServerName(), config.getServerLogo());
+            if (!isBot && !isStaff && !isAdmin) {
+                for (Member member : event.getMessage().getMentions().getMembers()) {
+                    if (member.getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
+                        event.getMessage().delete().queue();
 
-                    event.getChannel().sendMessageEmbeds(builder.build()).queue();
-                    break;
+                        EmbedBuilder builder = new EmbedBuilder()
+                                .setColor(Color.RED)
+                                .setTitle("Please do not ping staff members!")
+                                .setDescription("\uD83C\uDDEC\uD83C\uDDE7 A member of our staff will assist you shortly, thank you for your patience.\n\n\uD83C\uDDE9\uD83C\uDDEA Ein Teammitglied wird sich in Kürze um dein Ticket kümmern, vielen Dank für deine Geduld.")
+                                .setFooter(config.getServerName(), config.getServerLogo());
+
+                        event.getChannel().sendMessageEmbeds(builder.build()).queue();
+                        break;
+                    }
                 }
             }
         }
@@ -178,7 +250,8 @@ public class TicketListener extends ListenerAdapter {
 
     @Override
     public void onMessageDelete(@NotNull MessageDeleteEvent event) {
-        if (!event.isFromGuild() || !event.getChannelType().equals(ChannelType.TEXT) || ticketService.getTicketByChannelId(event.getChannel().getIdLong()) == null) return;
+        if (!event.isFromGuild() || !event.getChannelType().equals(ChannelType.TEXT) || ticketService.getTicketByChannelId(event.getChannel().getIdLong()) == null)
+            return;
         Ticket ticket = ticketService.getTicketByChannelId(event.getChannel().getIdLong());
         if (event.getMessageId().equals(ticket.getBaseMessage())) return;
 
@@ -208,10 +281,10 @@ public class TicketListener extends ListenerAdapter {
             EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                     .setColor(Color.decode(config.getColor()))
                     .addField(new MessageEmbed.Field("**Support request**", """
-                        You have questions or a problem?
-                        Just click the one of the buttons below.
-                        We will try to handle your ticket as soon as possible.
-                        """, false));
+                            You have questions or a problem?
+                            Just click the one of the buttons below.
+                            We will try to handle your ticket as soon as possible.
+                            """, false));
 
             StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
                     .setPlaceholder("Select your ticket topic");

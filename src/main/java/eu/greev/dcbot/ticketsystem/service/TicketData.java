@@ -69,6 +69,12 @@ public class TicketData {
                         ticketBuilder.supporter(jda.retrieveUserById(resultSet.getString("supporter")).complete());
                     }
 
+                    // Load closedAt if present
+                    long closedAt = resultSet.getLong("closedAt");
+                    if (!resultSet.wasNull()) {
+                        ticketBuilder.closedAt(closedAt);
+                    }
+
                     return ticketBuilder;
                 })
                 .findFirst()).orElse(null);
@@ -125,7 +131,7 @@ public class TicketData {
             return jdbi.withHandle(handle -> {
                 // If no ticketID (0), INSERT and return generated key; otherwise UPDATE and return existing id
                 if (ticket.getId() == 0) {
-                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, supporterRemindersSent, closeMessage, closer) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, supporterRemindersSent, closeMessage, closer, closedAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                     update
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
@@ -141,10 +147,11 @@ public class TicketData {
                             .bind(11, ticket.getRemindersSent())
                             .bind(12, ticket.getSupporterRemindersSent())
                             .bind(13, ticket.getCloseMessage())
-                            .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "");
+                            .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
+                            .bind(15, ticket.getClosedAt());
                     return update.executeAndReturnGeneratedKeys("ticketID").mapTo(Integer.class).one();
                 } else {
-                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=?, closeMessage=?, closer=? WHERE ticketID =?")
+                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=?, closeMessage=?, closer=?, closedAt=? WHERE ticketID =?")
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
                             .bind(2, ticket.getCategory().getId())
@@ -160,7 +167,8 @@ public class TicketData {
                             .bind(12, ticket.getSupporterRemindersSent())
                             .bind(13, ticket.getCloseMessage())
                             .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
-                            .bind(15, ticket.getId())
+                            .bind(15, ticket.getClosedAt())
+                            .bind(16, ticket.getId())
                             .execute();
                     return ticket.getId();
                 }
@@ -217,5 +225,55 @@ public class TicketData {
                     map.put(row.getColumn("channelID", String.class), row.getColumn("waitingSince", String.class));
                     return map;
                 }));
+    }
+
+    // Time-based ticket stats
+    public int countClosedTicketsLastDays(int days) {
+        long since = Instant.now().minus(days, java.time.temporal.ChronoUnit.DAYS).getEpochSecond();
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isOpen = false AND closedAt >= ?")
+                .bind(0, since)
+                .mapTo(Integer.class)
+                .findOne()
+                .orElse(0));
+    }
+
+    public Map<String, Integer> countClosedTicketsPerSupporterLastDays(int days) {
+        long since = Instant.now().minus(days, java.time.temporal.ChronoUnit.DAYS).getEpochSecond();
+        return jdbi.withHandle(handle -> handle.createQuery(
+                        "SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = false AND supporter != '' AND closedAt >= ? GROUP BY supporter ORDER BY c DESC")
+                .bind(0, since)
+                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                    map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
+                    return map;
+                }));
+    }
+
+    public int countTotalClosedTickets() {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isOpen = false")
+                .mapTo(Integer.class)
+                .findOne()
+                .orElse(0));
+    }
+
+    public Map<String, Integer> countClosedTicketsPerSupporterAllTime() {
+        return jdbi.withHandle(handle -> handle.createQuery(
+                        "SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = false AND supporter != '' GROUP BY supporter ORDER BY c DESC")
+                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                    map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
+                    return map;
+                }));
+    }
+
+    /**
+     * Marks a stale ticket as closed in the database.
+     * Used when the ticket's Discord channel no longer exists.
+     */
+    public void markStaleTicketAsClosed(int ticketId) {
+        long closedAt = Instant.now().getEpochSecond();
+        jdbi.useHandle(handle -> handle.createUpdate(
+                "UPDATE tickets SET isOpen = false, isWaiting = false, closeMessage = 'Auto-closed: Channel not found', closedAt = ? WHERE ticketID = ?")
+                .bind(0, closedAt)
+                .bind(1, ticketId)
+                .execute());
     }
 }

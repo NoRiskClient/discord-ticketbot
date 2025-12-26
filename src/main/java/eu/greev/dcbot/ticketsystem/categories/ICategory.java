@@ -14,4 +14,8 @@ public interface ICategory {
     default String getModalTitle() {
         return "Ticket: " + getLabel();
     }
+
+    default boolean isSensitive() {
+        return false;
+    }
 }

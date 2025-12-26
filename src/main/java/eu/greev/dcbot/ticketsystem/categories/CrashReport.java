@@ -8,54 +8,47 @@ import net.dv8tion.jda.api.interactions.modals.Modal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class Payment implements ICategory {
+public class CrashReport implements ICategory {
     @Override
     public String getId() {
-        return "payment";
+        return "crashreport";
     }
 
     @Override
     public String getLabel() {
-        return "Payment";
+        return "Crash Report";
     }
 
     @Override
     public String getDescription() {
-        return "Payment failed or items not received";
+        return "Game crashes - requires mc.logs link";
     }
 
     @Override
     public Modal getModal() {
-        TextInput nameInput = TextInput.create("name", "In-Game Name", TextInputStyle.SHORT)
-                .setPlaceholder("Your in-game name")
+        TextInput logsInput = TextInput.create("mclogs", "mc.logs Link", TextInputStyle.SHORT)
+                .setPlaceholder("https://mclo.gs/xxxxxxx")
+                .setMaxLength(100)
                 .setRequired(true)
-                .setMaxLength(16)
                 .build();
 
-        TextInput problemInput = TextInput.create("problem", "Problem", TextInputStyle.PARAGRAPH)
-                .setPlaceholder("Describe your payment issue in detail.")
+        TextInput descInput = TextInput.create("description", "Description", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("What happened? When does the game crash?")
+                .setMaxLength(500)
                 .setRequired(true)
-                .setMaxLength(700)
                 .build();
 
         return Modal.create(getId(), getModalTitle())
-                .addActionRow(nameInput)
-                .addActionRow(problemInput)
+                .addActionRow(logsInput)
+                .addActionRow(descInput)
                 .build();
     }
 
     @Override
     public Map<String, String> getInfo(ModalInteractionEvent event) {
         Map<String, String> map = new LinkedHashMap<>();
-
-        map.put("In-Game Name", event.getValue("name").getAsString());
-        map.put("Problem", event.getValue("problem").getAsString());
-
+        map.put("mc.logs", event.getValue("mclogs").getAsString());
+        map.put("Description", event.getValue("description").getAsString());
         return map;
-    }
-
-    @Override
-    public boolean isSensitive() {
-        return true;
     }
 }
