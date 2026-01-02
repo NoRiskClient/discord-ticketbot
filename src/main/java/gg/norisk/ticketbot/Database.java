@@ -1,17 +1,36 @@
 package gg.norisk.ticketbot;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import gg.norisk.ticketbot.entities.Ticket;
 import java.io.IOException;
 import java.io.InputStream;
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.channel.Channel;
 import org.jdbi.v3.core.Jdbi;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.sqlite.SQLiteDataSource;
 
-@RequiredArgsConstructor
 @Slf4j
 public class Database {
   private final String url;
   private Jdbi jdbi;
+  private final JDA jda;
+  private final Cache<String, Ticket> ticketByChannelCache;
+  private final Cache<Integer, Ticket> ticketByIdCache;
+
+  public Database(@NotNull String url, @NotNull JDA jda) {
+    this.url = url;
+    this.jda = jda;
+    this.ticketByChannelCache =
+        Caffeine.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).maximumSize(1000).build();
+
+    this.ticketByIdCache =
+        Caffeine.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).maximumSize(1000).build();
+  }
 
   public void initialize() throws IOException {
     SQLiteDataSource dataSource = new SQLiteDataSource();
@@ -41,5 +60,68 @@ public class Database {
       // Column already exists, ignore
     }
     log.info("Database migrations complete.");
+  }
+
+  @Nullable
+  public Ticket getTicketByChannelId(String channelId) {
+    Ticket cached = ticketByChannelCache.getIfPresent(channelId);
+    if (cached != null) {
+      return cached;
+    }
+
+    Ticket ticket =
+        jdbi.withHandle(
+            handle ->
+                handle
+                    .createQuery("SELECT * FROM tickets WHERE channelId = :channelId")
+                    .bind("channelId", channelId)
+                    .map(new Ticket.Mapper(jda))
+                    .findOne()
+                    .orElse(null));
+
+    if (ticket != null) {
+      ticketByChannelCache.put(channelId, ticket);
+      ticketByIdCache.put(ticket.getId(), ticket);
+    } else {
+      ticketByChannelCache.invalidate(channelId);
+    }
+
+    return ticket;
+  }
+
+  @Nullable
+  public Ticket getTicketByChannel(@Nullable Channel channel) {
+    if (channel == null) {
+      return null;
+    }
+    return getTicketByChannelId(channel.getId());
+  }
+
+  @Nullable
+  public Ticket getTicketById(int id) {
+    Ticket cached = ticketByIdCache.getIfPresent(id);
+    if (cached != null) {
+      return cached;
+    }
+
+    Ticket ticket =
+        jdbi.withHandle(
+            handle ->
+                handle
+                    .createQuery("SELECT * FROM tickets WHERE id = :id")
+                    .bind("id", id)
+                    .map(new Ticket.Mapper(jda))
+                    .findOne()
+                    .orElse(null));
+
+    if (ticket != null) {
+      ticketByIdCache.put(id, ticket);
+      ticketByChannelCache.put(
+          ticket.getChannel() != null ? ticket.getChannel().getId() : "", ticket);
+    } else {
+      ticketByIdCache.invalidate(id);
+    }
+
+    return ticket;
   }
 }

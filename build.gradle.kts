@@ -19,6 +19,7 @@ dependencies {
         exclude("club.minnced", "opus-java")
         exclude("com.google.crypto.tink", "tink")
     }
+
     implementation("org.jdbi", "jdbi3-oracle12", "3.44.0")
     implementation("org.xerial", "sqlite-jdbc", "3.50.3.0")
     implementation("org.apache.logging.log4j", "log4j-api", "2.25.1")
@@ -27,6 +28,7 @@ dependencies {
     implementation("me.carleslc.Simple-YAML", "Simple-Yaml", "1.8.3")
     implementation("com.fasterxml.jackson.core", "jackson-databind", "2.16.1")
     implementation("com.github.Ryzeon", "discord-html-transcripts", "2.1")
+    implementation("com.github.ben-manes.caffeine", "caffeine", "3.2.3")
 
     compileOnly("org.projectlombok", "lombok", "1.18.40")
     annotationProcessor("org.projectlombok", "lombok", "1.18.40")

@@ -18,6 +18,8 @@ public class Config {
   private String token = "";
   private String activityType = "LISTENING";
   private String activityText = " ticket commands.";
+  private String staffId = "";
+  private String guildId = "";
 
   public static Config load(@NotNull Path path) throws IOException {
     Files.createDirectories(path.getParent());

@@ -27,6 +27,18 @@ public class Main {
       System.exit(1);
     }
 
+    if (config.getGuildId().isBlank()) {
+      log.error(
+          "No guild ID provided! Please provide a valid guild ID in your configuration and restart the bot.");
+      System.exit(1);
+    }
+
+    if (config.getStaffId().isBlank()) {
+      log.error(
+          "No staff role ID provided! Please provide a valid staff role ID in your configuration and restart the bot.");
+      System.exit(1);
+    }
+
     JDA jda;
 
     try {
@@ -66,7 +78,7 @@ public class Main {
 
     jda.awaitReady();
 
-    Database database = new Database("jdbc:sqlite:./Tickets/tickets.db");
+    Database database = new Database("jdbc:sqlite:./Tickets/tickets.db", jda);
 
     try {
       database.initialize();
