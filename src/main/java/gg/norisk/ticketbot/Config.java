@@ -20,6 +20,7 @@ public class Config {
   private String activityText = " ticket commands.";
   private String staffId = "";
   private String guildId = "";
+  private String color = "#008cff";
 
   public static Config load(@NotNull Path path) throws IOException {
     Files.createDirectories(path.getParent());

@@ -1,16 +1,23 @@
 package gg.norisk.ticketbot.interaction;
 
+import net.dv8tion.jda.api.EmbedBuilder;
+
 public class InteractionMessages {
-  public static final CustomEmbedBuilder INTERACTION_MISSING_PERMISSIONS =
+  public static final EmbedBuilder INTERACTION_MISSING_PERMISSIONS =
       failure(
           "message.interaction.missing_permissions.title",
           "message.interaction.missing_permissions.description");
 
-  private static CustomEmbedBuilder success(String title, String message) {
-    return new CustomEmbedBuilder().setTitle(title).setDescription(message).setColor(0x00FF00);
+  public static final EmbedBuilder INTERACTION_WRONG_CHANNEL =
+      failure(
+          "message.interaction.wrong_channel.title",
+          "message.interaction.wrong_channel.description");
+
+  private static EmbedBuilder success(String title, String message) {
+    return new EmbedBuilder().setTitle(title).setDescription(message).setColor(0x00FF00);
   }
 
-  private static CustomEmbedBuilder failure(String title, String message) {
-    return new CustomEmbedBuilder().setTitle(title).setDescription(message).setColor(0xFF0000);
+  private static EmbedBuilder failure(String title, String message) {
+    return new EmbedBuilder().setTitle(title).setDescription(message).setColor(0xFF0000);
   }
 }

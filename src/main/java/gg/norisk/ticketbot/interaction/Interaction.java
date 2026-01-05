@@ -4,13 +4,17 @@ import gg.norisk.ticketbot.Config;
 import gg.norisk.ticketbot.Database;
 import gg.norisk.ticketbot.TicketManager;
 import gg.norisk.ticketbot.entities.Ticket;
+import gg.norisk.ticketbot.util.EmbedBuildInfo;
+import gg.norisk.ticketbot.util.EmbedUtils;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
@@ -99,7 +103,11 @@ public abstract class Interaction {
     if (!member.getRoles().contains(jda.getRoleById(config.getStaffId()))
         || (administratorRequired && !member.getPermissions().contains(Permission.ADMINISTRATOR))) {
       if (reply != null)
-        replyEphemeralAndQueue(InteractionMessages.INTERACTION_MISSING_PERMISSIONS);
+        replyEphemeralAndQueue(
+            new EmbedBuildInfo(
+                InteractionMessages.INTERACTION_MISSING_PERMISSIONS,
+                reply.getUserLocale().toLocale(),
+                null));
       return true;
     }
 
@@ -110,7 +118,11 @@ public abstract class Interaction {
     if (!Optional.ofNullable(reply.getChannel())
         .map(ticketManager::isTicketChannel)
         .orElse(false)) {
-      replyEphemeralAndQueue(InteractionMessages.INTERACTION_WRONG_CHANNEL);
+      replyEphemeralAndQueue(
+          new EmbedBuildInfo(
+              InteractionMessages.INTERACTION_WRONG_CHANNEL,
+              reply.getUserLocale().toLocale(),
+              null));
       return true;
     }
 
@@ -136,41 +148,48 @@ public abstract class Interaction {
     }
   }
 
-  protected void replyEphemeralAndQueue(CustomEmbedBuilder builder) {
-    replyEphemeral(builder).queue();
+  protected void replyEphemeralAndQueue(EmbedBuildInfo info) {
+    replyEphemeral(info).queue();
   }
 
-  protected void replyAndQueue(CustomEmbedBuilder builder) {
-    reply(builder).queue();
+  protected void replyAndQueue(EmbedBuildInfo info) {
+    reply(info).queue();
   }
 
-  protected ReplyCallbackAction replyEphemeral(CustomEmbedBuilder builder) {
-    return reply(builder).setEphemeral(true);
+  protected ReplyCallbackAction replyEphemeral(EmbedBuildInfo info) {
+    return reply(info).setEphemeral(true);
   }
 
-  protected ReplyCallbackAction reply(CustomEmbedBuilder builder) {
-    return reply.replyEmbeds(build(builder));
+  protected ReplyCallbackAction reply(EmbedBuildInfo info) {
+    return reply.replyEmbeds(build(info));
   }
 
-  protected void deferEphemeralAndQueue(Supplier<CustomEmbedBuilder> builderSupplier) {
+  protected void deferEphemeralAndQueue(Supplier<EmbedBuildInfo> infoSupplier) {
     reply.deferReply(true).queue();
-    CustomEmbedBuilder builder = builderSupplier.get();
-    reply.getHook().sendMessageEmbeds(build(builder)).setEphemeral(true).queue();
+    EmbedBuildInfo info = infoSupplier.get();
+    reply.getHook().sendMessageEmbeds(build(info)).setEphemeral(true).queue();
   }
 
-  /**
-   * Sets the default placeholder values and builds the CustomEmbedBuilder
-   *
-   * @param builder The CustomEmbedBuilder to be built
-   * @return The built MessageEmbed
-   */
-  private MessageEmbed build(CustomEmbedBuilder builder) {
-    builder.setPlaceholder("$SERVER_NAME", config.getServerName());
-    builder.setPlaceholder("$SERVER_LOGO", config.getServerLogo());
-    builder.setPlaceholder("$USER_NAME", reply.getUser().getName());
-    builder.setPlaceholder("$USER_AVATAR", reply.getUser().getEffectiveAvatarUrl());
-    builder.setPlaceholder("$MENTION", reply.getUser().getAsMention());
-    builder.setPlaceholder("$CONFIG_COLOR", config.getColor());
-    return builder.build();
+  private MessageEmbed build(EmbedBuildInfo info) {
+    Guild guild = jda.getGuildById(config.getGuildId());
+
+    if (guild == null) {
+      log.error(
+          "Guild with ID {} not found for interaction {}", config.getGuildId(), getIdentifier());
+      throw new IllegalStateException("Guild not found");
+    }
+
+    EmbedBuilder builder = info.builder();
+    Map<String, String> placeholders =
+        info.placeholders() != null ? info.placeholders() : new HashMap<>();
+
+    placeholders.put("SERVER_NAME", guild.getName());
+    placeholders.put("SERVER_LOGO", guild.getIconUrl());
+    placeholders.put("USER_NAME", reply.getUser().getName());
+    placeholders.put("USER_AVATAR", reply.getUser().getEffectiveAvatarUrl());
+    placeholders.put("MENTION", reply.getUser().getAsMention());
+    placeholders.put("CONFIG_COLOR", config.getColor());
+
+    return EmbedUtils.resolve(builder, info.locale(), placeholders).build();
   }
 }
