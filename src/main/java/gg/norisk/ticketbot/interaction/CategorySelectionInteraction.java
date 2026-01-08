@@ -1,8 +1,9 @@
 package gg.norisk.ticketbot.interaction;
 
-import eu.greev.dcbot.ticketsystem.categories.TicketCategory;
-import eu.greev.dcbot.ticketsystem.service.TicketService;
-import eu.greev.dcbot.utils.Config;
+import gg.norisk.ticketbot.Config;
+import gg.norisk.ticketbot.Database;
+import gg.norisk.ticketbot.TicketCategory;
+import gg.norisk.ticketbot.TicketManager;
 import java.util.Arrays;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -10,8 +11,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class CategorySelectionInteraction extends ArgumentedInteraction {
   public CategorySelectionInteraction(
-      @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
-    super(config, ticketService, jda);
+      @NotNull Config config,
+      @NotNull TicketManager ticketManager,
+      @NotNull Database database,
+      @NotNull JDA jda) {
+    super(config, ticketManager, database, jda);
     this.permissionsRequired = false;
     this.ticketChannelRequired = false;
   }
@@ -24,12 +28,10 @@ public class CategorySelectionInteraction extends ArgumentedInteraction {
   @Override
   public void handleStringSelectInteraction(@NotNull StringSelectInteractionEvent event) {
     if (arguments.length == 1) {
-      TicketCategory category =
-          Arrays.stream(TicketCategory.values())
-              .filter(c -> c.getId().equals(arguments[0]))
-              .findFirst()
-              .orElse(null);
-      if (category != null) event.replyModal(category.getModal()).queue();
+      Arrays.stream(TicketCategory.values())
+          .filter(c -> c.getId().equals(arguments[0]))
+          .findFirst()
+          .ifPresent(category -> event.replyModal(category.getModal()).queue());
     }
   }
 }
