@@ -19,6 +19,7 @@ import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.awt.*;
 import java.time.Instant;
+import java.util.List;
 
 @Slf4j
 public class RatingModal implements Interaction {
@@ -137,7 +138,7 @@ public class RatingModal implements Interaction {
 
     private String sendRatingNotification(Ticket ticket, int stars, String message) {
         String starDisplay = getStarDisplay(stars);
-        Color embedColor = stars >= 4 ? Color.GREEN : stars >= 3 ? Color.YELLOW : Color.RED;
+        Color embedColor = stars >= 4 ? Color.GREEN : stars == 3 ? Color.YELLOW : Color.RED;
 
         // Generate HTML transcript and upload to log channel to get URL
         String transcriptUrl = null;
@@ -196,7 +197,13 @@ public class RatingModal implements Interaction {
             notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
         }
 
-        for (Long channelId : config.getRatingNotificationChannels()) {
+        List<Long> ratingNotificationChannels = config.getRatingNotificationChannels();
+
+        if (stars <= 3) {
+            ratingNotificationChannels.addAll(config.getLowRatingNotificationChannels());
+        }
+
+        for (Long channelId : ratingNotificationChannels) {
             var channel = jda.getTextChannelById(channelId);
             if (channel != null) {
                 channel.sendMessageEmbeds(notification.build()).queue();

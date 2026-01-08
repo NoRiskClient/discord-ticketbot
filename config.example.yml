@@ -55,6 +55,10 @@ addToTicketThread:
 ratingNotificationChannels:
   - 123456789012345678
 
+# Channel IDs where rating notifications for ratings of 3 stars or lower are posted additionally
+lowRatingNotificationChannels:
+  - 123456789012345678
+
 # Custom claim emojis per user (userId: emoji)
 claimEmojis:
   123456789012345678: "🎫"
