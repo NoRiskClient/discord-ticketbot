@@ -177,7 +177,7 @@ public abstract class Interaction {
     placeholders.put("SERVER_LOGO", guild.getIconUrl());
     placeholders.put("USER_NAME", reply.getUser().getName());
     placeholders.put("USER_AVATAR", reply.getUser().getEffectiveAvatarUrl());
-    placeholders.put("MENTION", reply.getUser().getAsMention());
+    placeholders.put("USER_MENTION", reply.getUser().getAsMention());
     placeholders.put("CONFIG_COLOR", config.getColor());
 
     return EmbedUtils.resolve(builder, info.locale(), placeholders).build();

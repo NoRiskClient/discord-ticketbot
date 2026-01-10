@@ -24,10 +24,11 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 @Slf4j
 public class Main {
+  public static final String VERSION = "2.0.0-beta";
   private static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    log.info("Starting ticket bot...");
+    log.info("Starting ticket bot v{}...", VERSION);
 
     log.debug("Loading configuration...");
 
