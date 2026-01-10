@@ -13,6 +13,13 @@ public class InteractionMessages {
           "message.interaction.wrong_channel.title",
           "message.interaction.wrong_channel.description");
 
+  public static final EmbedBuilder TICKET_CREATION_FAILURE =
+      failure("message.ticket.creation.failed.title", "message.ticket.creation.failed.description");
+
+  public static final EmbedBuilder TICKET_CREATION_SUCCESS =
+      success(
+          "message.ticket.creation.success.title", "message.ticket.creation.success.description");
+
   private static EmbedBuilder success(String title, String message) {
     return new EmbedBuilder().setTitle(title).setDescription(message).setColor(0x00FF00);
   }

@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.channel.Channel;
 import org.jdbi.v3.core.Jdbi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,14 +86,6 @@ public class Database {
     }
 
     return ticket;
-  }
-
-  @Nullable
-  public Ticket getTicketByChannel(@Nullable Channel channel) {
-    if (channel == null) {
-      return null;
-    }
-    return getTicketByChannelId(channel.getId());
   }
 
   @Nullable

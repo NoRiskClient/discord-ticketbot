@@ -1,8 +1,7 @@
 package gg.norisk.ticketbot.interaction;
 
 import gg.norisk.ticketbot.Config;
-import gg.norisk.ticketbot.Database;
-import gg.norisk.ticketbot.TicketManager;
+import gg.norisk.ticketbot.TicketService;
 import gg.norisk.ticketbot.entities.Ticket;
 import gg.norisk.ticketbot.util.EmbedBuildInfo;
 import gg.norisk.ticketbot.util.EmbedUtils;
@@ -38,8 +37,7 @@ public abstract class Interaction {
       new SubcommandGroupData("list-tickets", "Lists tickets with options to narrow down results");
 
   protected final @NotNull Config config;
-  protected final @NotNull TicketManager ticketManager;
-  protected final @NotNull Database database;
+  protected final @NotNull TicketService ticketService;
   protected final @NotNull JDA jda;
 
   protected boolean permissionsRequired = true;
@@ -50,13 +48,9 @@ public abstract class Interaction {
   @Getter protected IReplyCallback reply;
 
   protected Interaction(
-      @NotNull Config config,
-      @NotNull TicketManager ticketManager,
-      @NotNull Database database,
-      @NotNull JDA jda) {
+      @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
     this.config = config;
-    this.ticketManager = ticketManager;
-    this.database = database;
+    this.ticketService = ticketService;
     this.jda = jda;
   }
 
@@ -116,7 +110,7 @@ public abstract class Interaction {
 
   private boolean isIncorrectChannel(IReplyCallback reply) {
     if (!Optional.ofNullable(reply.getChannel())
-        .map(ticketManager::isTicketChannel)
+        .map(ticketService::isTicketChannel)
         .orElse(false)) {
       replyEphemeralAndQueue(
           new EmbedBuildInfo(
@@ -138,7 +132,7 @@ public abstract class Interaction {
     this.reply = event;
     if (conditionsNotFulfilled(event)) return;
     if (this.ticketChannelRequired)
-      this.ticket = this.database.getTicketByChannel(event.getChannel());
+      this.ticket = this.ticketService.getTicketByChannel(event.getChannel());
     switch (event) {
       case ButtonInteractionEvent e -> handleButtonInteraction(e);
       case ModalInteractionEvent e -> handleModalInteraction(e);

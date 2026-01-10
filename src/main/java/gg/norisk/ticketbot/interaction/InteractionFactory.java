@@ -1,11 +1,10 @@
 package gg.norisk.ticketbot.interaction;
 
 import gg.norisk.ticketbot.Config;
-import gg.norisk.ticketbot.Database;
-import gg.norisk.ticketbot.TicketManager;
+import gg.norisk.ticketbot.TicketService;
 import net.dv8tion.jda.api.JDA;
 
 @FunctionalInterface
 public interface InteractionFactory {
-  Interaction create(Config config, TicketManager ticketManager, Database database, JDA jda);
+  Interaction create(Config config, TicketService ticketService, JDA jda);
 }
