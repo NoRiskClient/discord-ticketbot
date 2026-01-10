@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.error.YAMLException;
 
 @Slf4j
 @Getter
@@ -33,7 +34,14 @@ public class Config {
     }
 
     Yaml yaml = new Yaml(new Constructor(Config.class));
-    return yaml.load(Files.newInputStream(path));
+
+    try {
+      return yaml.load(Files.newInputStream(path));
+    } catch (YAMLException e) {
+      log.error("Error while parsing configuration:\n{}", e.getMessage());
+      System.exit(1);
+      return null;
+    }
   }
 
   public void save(@NotNull Path path) {
