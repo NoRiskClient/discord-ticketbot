@@ -4,8 +4,8 @@ import gg.norisk.ticketbot.Config;
 import gg.norisk.ticketbot.TicketCategory;
 import gg.norisk.ticketbot.TicketService;
 import gg.norisk.ticketbot.entities.Ticket;
+import gg.norisk.ticketbot.interaction.Embeds;
 import gg.norisk.ticketbot.interaction.Interaction;
-import gg.norisk.ticketbot.interaction.InteractionMessages;
 import gg.norisk.ticketbot.util.EmbedBuildInfo;
 import gg.norisk.ticketbot.util.Result;
 import java.util.Map;
@@ -45,12 +45,12 @@ public class TicketCreationModalInteraction extends Interaction {
               && result.getValue() != null
               && result.getValue().getChannel() != null) {
             return new EmbedBuildInfo(
-                InteractionMessages.TICKET_CREATION_SUCCESS,
+                Embeds.TICKET_CREATION_SUCCESS,
                 event.getInteraction().getUserLocale().toLocale(),
                 Map.of("CHANNEL", result.getValue().getChannel().getId()));
           } else {
             return new EmbedBuildInfo(
-                InteractionMessages.TICKET_CREATION_FAILURE,
+                Embeds.TICKET_CREATION_FAILED,
                 event.getInteraction().getUserLocale().toLocale(),
                 Map.of("ERROR", Optional.ofNullable(result.getError()).orElse("Unknown error")));
           }

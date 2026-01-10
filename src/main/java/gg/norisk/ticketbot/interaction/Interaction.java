@@ -99,9 +99,7 @@ public abstract class Interaction {
       if (reply != null)
         replyEphemeralAndQueue(
             new EmbedBuildInfo(
-                InteractionMessages.INTERACTION_MISSING_PERMISSIONS,
-                reply.getUserLocale().toLocale(),
-                null));
+                Embeds.INTERACTION_MISSING_PERMISSIONS, reply.getUserLocale().toLocale(), null));
       return true;
     }
 
@@ -114,9 +112,7 @@ public abstract class Interaction {
         .orElse(false)) {
       replyEphemeralAndQueue(
           new EmbedBuildInfo(
-              InteractionMessages.INTERACTION_WRONG_CHANNEL,
-              reply.getUserLocale().toLocale(),
-              null));
+              Embeds.INTERACTION_WRONG_CHANNEL, reply.getUserLocale().toLocale(), null));
       return true;
     }
 
