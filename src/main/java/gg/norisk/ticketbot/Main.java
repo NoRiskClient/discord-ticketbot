@@ -128,12 +128,13 @@ public class Main {
     }
   }
 
-  private static void registerTicketCreationInteractions(Config config, TicketService ticketService, JDA jda) {
-      for (TicketCategory category : TicketCategory.values()) {
-          Interaction interaction =
-                  new TicketCreationModalInteraction(config, ticketService, jda, category);
-          registerInteraction(interaction);
-      }
+  private static void registerTicketCreationInteractions(
+      Config config, TicketService ticketService, JDA jda) {
+    for (TicketCategory category : TicketCategory.values()) {
+      Interaction interaction =
+          new TicketCreationModalInteraction(config, ticketService, jda, category);
+      registerInteraction(interaction);
+    }
   }
 
   public static void handleInteraction(String s, IReplyCallback event) {

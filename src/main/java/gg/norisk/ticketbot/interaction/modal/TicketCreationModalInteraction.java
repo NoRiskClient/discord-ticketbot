@@ -41,7 +41,9 @@ public class TicketCreationModalInteraction extends Interaction {
                   category,
                   event.getInteraction().getUser());
 
-          if (result.getError() == null && result.getValue() != null && result.getValue().getChannel() != null) {
+          if (result.getError() == null
+              && result.getValue() != null
+              && result.getValue().getChannel() != null) {
             return new EmbedBuildInfo(
                 InteractionMessages.TICKET_CREATION_SUCCESS,
                 event.getInteraction().getUserLocale().toLocale(),
