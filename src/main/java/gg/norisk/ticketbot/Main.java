@@ -108,6 +108,7 @@ public class Main {
 
     log.debug("Registering interactions...");
 
+    registerTicketCreationInteractions(config, ticketService, jda);
     registerInteractions(config, ticketService, jda, CategorySelectionInteraction::new);
 
     jda.addEventListener(new EventListener());
@@ -127,11 +128,12 @@ public class Main {
     }
   }
 
-  private static void registerTicketCreationInteraction(
-      Config config, TicketService ticketService, JDA jda, TicketCategory category) {
-    Interaction interaction =
-        new TicketCreationModalInteraction(config, ticketService, jda, category);
-    registerInteraction(interaction);
+  private static void registerTicketCreationInteractions(Config config, TicketService ticketService, JDA jda) {
+      for (TicketCategory category : TicketCategory.values()) {
+          Interaction interaction =
+                  new TicketCreationModalInteraction(config, ticketService, jda, category);
+          registerInteraction(interaction);
+      }
   }
 
   public static void handleInteraction(String s, IReplyCallback event) {
