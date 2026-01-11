@@ -1,31 +1,38 @@
 package gg.norisk.ticketbot;
 
 import gg.norisk.ticketbot.interaction.ArgumentedInteraction;
+import gg.norisk.ticketbot.interaction.Embeds;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
 import gg.norisk.ticketbot.interaction.modal.TicketCreationModalInteraction;
 import gg.norisk.ticketbot.interaction.selections.CategorySelectionInteraction;
+import gg.norisk.ticketbot.util.EmbedUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
+import org.jetbrains.annotations.Nullable;
 
 @Slf4j
 public class Main {
   public static final String VERSION = "2.0.0-beta";
   private static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
+  public static @Nullable String BASE_MESSAGE_ID;
 
   public static void main(String[] args) throws IOException, InterruptedException {
     log.info("Starting ticket bot v{}...", VERSION);
@@ -34,23 +41,7 @@ public class Main {
 
     Config config = Config.load(Path.of("Tickets/config.yml"));
 
-    if (config.getToken().isBlank()) {
-      log.error(
-          "No bot token provided! Please provide a valid token in your configuration and restart the bot.");
-      System.exit(1);
-    }
-
-    if (config.getGuildId().isBlank()) {
-      log.error(
-          "No guild ID provided! Please provide a valid guild ID in your configuration and restart the bot.");
-      System.exit(1);
-    }
-
-    if (config.getStaffId().isBlank()) {
-      log.error(
-          "No staff role ID provided! Please provide a valid staff role ID in your configuration and restart the bot.");
-      System.exit(1);
-    }
+    config.validate();
 
     log.debug("Initializing JDA...");
 
@@ -93,6 +84,8 @@ public class Main {
 
     jda.awaitReady();
 
+    config.validateJdaContext(jda);
+
     log.debug("Initializing database...");
 
     Database database = new Database("jdbc:sqlite:./Tickets/tickets.db", jda);
@@ -104,6 +97,10 @@ public class Main {
       System.exit(1);
       return;
     }
+
+    log.debug("Updating base message...");
+
+    updateBaseMessage(config, database, jda);
 
     TicketService ticketService = new TicketService(database);
 
@@ -150,5 +147,25 @@ public class Main {
         interaction.handle(event);
       }
     }
+  }
+
+  private static void updateBaseMessage(Config config, Database database, JDA jda) {
+    TextChannel channel = Objects.requireNonNull(jda.getTextChannelById(config.getBaseChannelId()));
+    String id = database.getMiscValue("base_message_id");
+
+    if (id != null && !id.isBlank()) {
+      channel.deleteMessageById(id).queue();
+    }
+
+    Message message =
+        channel
+            .sendMessageEmbeds(
+                EmbedUtils.resolve(
+                        Embeds.TICKET_BASE_MESSAGE, channel.getGuild().getLocale().toLocale(), null)
+                    .build())
+            .complete();
+
+    database.setMiscValue("base_message_id", message.getId());
+    BASE_MESSAGE_ID = message.getId();
   }
 }

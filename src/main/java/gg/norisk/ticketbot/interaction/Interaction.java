@@ -174,9 +174,9 @@ public abstract class Interaction {
         info.placeholders() != null ? info.placeholders() : new HashMap<>();
 
     placeholders.put("SERVER_NAME", guild.getName());
-    placeholders.put("SERVER_LOGO", guild.getIconUrl());
+    placeholders.put("SERVER_ICON_URL", guild.getIconUrl());
     placeholders.put("USER_NAME", reply.getUser().getName());
-    placeholders.put("USER_AVATAR", reply.getUser().getEffectiveAvatarUrl());
+    placeholders.put("USER_AVATAR_URL", reply.getUser().getEffectiveAvatarUrl());
     placeholders.put("USER_MENTION", reply.getUser().getAsMention());
     placeholders.put("CONFIG_COLOR", config.getColor());
 

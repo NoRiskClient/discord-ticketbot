@@ -3,9 +3,12 @@ package gg.norisk.ticketbot;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.JDA;
 import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -22,6 +25,7 @@ public class Config {
   private String staffId = "";
   private String guildId = "";
   private String color = "#008cff";
+  private String baseChannelId = "";
 
   public static Config load(@NotNull Path path) throws IOException {
     Files.createDirectories(path.getParent());
@@ -53,6 +57,42 @@ public class Config {
       yaml.dump(this, Files.newBufferedWriter(path));
     } catch (Exception e) {
       log.error("Failed saving config to file: {}", path.toAbsolutePath(), e);
+    }
+  }
+
+  public void validate() {
+    Map<String, String> requiredFields = new LinkedHashMap<>();
+    requiredFields.put("token", this.token);
+    requiredFields.put("staffId", this.staffId);
+    requiredFields.put("guildId", this.guildId);
+    requiredFields.put("baseChannelId", this.baseChannelId);
+
+    for (Map.Entry<String, String> entry : requiredFields.entrySet()) {
+      if (entry.getValue() == null || entry.getValue().isBlank()) {
+        log.error(
+            "No {} provided! Please provide a {} in your configuration and restart the bot.",
+            entry.getKey(),
+            entry.getKey());
+        System.exit(1);
+      }
+    }
+  }
+
+  public void validateJdaContext(JDA jda) {
+    if (jda.getGuildById(this.guildId) == null) {
+      log.error(
+          "The guild ID provided in the configuration is invalid! Please check your configuration.");
+      System.exit(1);
+    }
+    if (jda.getRoleById(this.staffId) == null) {
+      log.error(
+          "The staff role ID provided in the configuration is invalid! Please check your configuration.");
+      System.exit(1);
+    }
+    if (jda.getTextChannelById(this.baseChannelId) == null) {
+      log.error(
+          "The base channel ID provided in the configuration is invalid! Please check your configuration.");
+      System.exit(1);
     }
   }
 }

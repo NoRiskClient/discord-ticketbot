@@ -48,17 +48,41 @@ public class Database {
   }
 
   private void migrate() {
-    log.info("Checking database migrations...");
+    log.debug("Checking database migrations...");
     try {
       jdbi.withHandle(
           h ->
               h.createUpdate("ALTER TABLE tickets ADD COLUMN closedAt BIGINT DEFAULT NULL")
                   .execute());
-      log.info("Added closedAt column to tickets table");
+      log.info("Database migration: Added 'closedAt' column to 'tickets' table.");
     } catch (Exception e) {
       // Column already exists, ignore
     }
-    log.info("Database migrations complete.");
+    log.debug("Database migrations complete.");
+  }
+
+  @Nullable
+  public String getMiscValue(String key) {
+    return jdbi.withHandle(
+        handle ->
+            handle
+                .createQuery("SELECT value FROM misc WHERE key = :key")
+                .bind("key", key)
+                .mapTo(String.class)
+                .findOne()
+                .orElse(null));
+  }
+
+  public void setMiscValue(String key, String value) {
+    jdbi.useHandle(
+        handle ->
+            handle
+                .createUpdate(
+                    "INSERT INTO misc (key, value) VALUES (:key, :value) "
+                        + "ON CONFLICT(key) DO UPDATE SET value = :value")
+                .bind("key", key)
+                .bind("value", value)
+                .execute());
   }
 
   @Nullable
