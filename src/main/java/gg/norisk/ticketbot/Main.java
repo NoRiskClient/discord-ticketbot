@@ -164,18 +164,13 @@ public class Main {
                     "selection.category.placeholder", channel.getGuild().getLocale().toLocale()));
 
     for (TicketCategory category : TicketCategory.values()) {
-      log.debug(
-          TranslationUtils.translate(
-              "selection.category.label." + category.getId(),
-              channel.getGuild().getLocale().toLocale()));
 
       selectionBuilder.addOption(
           TranslationUtils.translate(
-              "selection.category.label." + category.getId(),
-              channel.getGuild().getLocale().toLocale()),
+              "category.label." + category.getId(), channel.getGuild().getLocale().toLocale()),
           "category-select " + category.getId(),
           TranslationUtils.translate(
-              "selection.category.description." + category.getId(),
+              "category.description." + category.getId(),
               channel.getGuild().getLocale().toLocale()));
     }
 

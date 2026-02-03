@@ -28,7 +28,9 @@ public class CategorySelectionInteraction extends ArgumentedInteraction {
       Arrays.stream(TicketCategory.values())
           .filter(c -> c.getId().equals(arguments[0]))
           .findFirst()
-          .ifPresent(category -> event.replyModal(category.getModal()).queue());
+          .ifPresent(
+              category ->
+                  event.replyModal(category.getModal(event.getUserLocale().toLocale())).queue());
     }
   }
 }
