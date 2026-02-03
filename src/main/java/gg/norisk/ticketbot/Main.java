@@ -140,10 +140,12 @@ public class Main {
     if (INTERACTIONS.containsKey(id)) {
       Interaction interaction = INTERACTIONS.get(id);
       if (interaction instanceof ArgumentedInteraction argumented) {
-        argumented.handleArgumented(id, event);
+        argumented.handleArgumented(s, event);
       } else {
         interaction.handle(event);
       }
+    } else {
+      log.warn("No interaction found for id: {}", id);
     }
   }
 
@@ -158,7 +160,7 @@ public class Main {
     }
 
     StringSelectMenu.Builder selectionBuilder =
-        StringSelectMenu.create("category-selection")
+        StringSelectMenu.create("select-category")
             .setPlaceholder(
                 TranslationUtils.translate(
                     "selection.category.placeholder", channel.getGuild().getLocale().toLocale()));
@@ -168,7 +170,7 @@ public class Main {
       selectionBuilder.addOption(
           TranslationUtils.translate(
               "category.label." + category.getId(), channel.getGuild().getLocale().toLocale()),
-          "category-select " + category.getId(),
+          category.getId(),
           TranslationUtils.translate(
               "category.description." + category.getId(),
               channel.getGuild().getLocale().toLocale()));
