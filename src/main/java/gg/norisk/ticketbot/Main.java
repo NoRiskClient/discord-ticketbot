@@ -1,18 +1,15 @@
 package gg.norisk.ticketbot;
 
+import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.interaction.ArgumentedInteraction;
-import gg.norisk.ticketbot.interaction.Embeds;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
 import gg.norisk.ticketbot.interaction.modal.TicketCreationModalInteraction;
 import gg.norisk.ticketbot.interaction.selections.CategorySelectionInteraction;
-import gg.norisk.ticketbot.util.EmbedUtils;
+import gg.norisk.ticketbot.util.TranslationUtils;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -22,6 +19,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
@@ -154,15 +152,44 @@ public class Main {
     String id = database.getMiscValue("base_message_id");
 
     if (id != null && !id.isBlank()) {
-      channel.deleteMessageById(id).queue();
+      channel
+          .deleteMessageById(id)
+          .queue(success -> log.debug("Deleted old base message with id {}", id), error -> {});
+    }
+
+    StringSelectMenu.Builder selectionBuilder =
+        StringSelectMenu.create("category-selection")
+            .setPlaceholder(
+                TranslationUtils.translate(
+                    "selection.category.placeholder", channel.getGuild().getLocale().toLocale()));
+
+    for (TicketCategory category : TicketCategory.values()) {
+      log.debug(
+          TranslationUtils.translate(
+              "selection.category.label." + category.getId(),
+              channel.getGuild().getLocale().toLocale()));
+
+      selectionBuilder.addOption(
+          TranslationUtils.translate(
+              "selection.category.label." + category.getId(),
+              channel.getGuild().getLocale().toLocale()),
+          "category-select " + category.getId(),
+          TranslationUtils.translate(
+              "selection.category.description." + category.getId(),
+              channel.getGuild().getLocale().toLocale()));
     }
 
     Message message =
         channel
             .sendMessageEmbeds(
-                EmbedUtils.resolve(
-                        Embeds.TICKET_BASE_MESSAGE, channel.getGuild().getLocale().toLocale(), null)
+                Embeds.TICKET_BASE_MESSAGE.toBuilder(
+                        config,
+                        channel.getGuild().getLocale().toLocale(),
+                        Map.of(),
+                        channel.getGuild(),
+                        null)
                     .build())
+            .setActionRow(selectionBuilder.build())
             .complete();
 
     database.setMiscValue("base_message_id", message.getId());

@@ -2,15 +2,15 @@ package gg.norisk.ticketbot.interaction;
 
 import gg.norisk.ticketbot.Config;
 import gg.norisk.ticketbot.TicketService;
+import gg.norisk.ticketbot.embed.EmbedBuildInfo;
+import gg.norisk.ticketbot.embed.EmbedDefinition;
+import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.entities.Ticket;
-import gg.norisk.ticketbot.util.EmbedBuildInfo;
-import gg.norisk.ticketbot.util.EmbedUtils;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -169,17 +169,13 @@ public abstract class Interaction {
       throw new IllegalStateException("Guild not found");
     }
 
-    EmbedBuilder builder = info.builder();
+    EmbedDefinition definition = info.definition();
     Map<String, String> placeholders =
         info.placeholders() != null ? info.placeholders() : new HashMap<>();
 
-    placeholders.put("SERVER_NAME", guild.getName());
-    placeholders.put("SERVER_ICON_URL", guild.getIconUrl());
-    placeholders.put("USER_NAME", reply.getUser().getName());
-    placeholders.put("USER_AVATAR_URL", reply.getUser().getEffectiveAvatarUrl());
     placeholders.put("USER_MENTION", reply.getUser().getAsMention());
-    placeholders.put("CONFIG_COLOR", config.getColor());
 
-    return EmbedUtils.resolve(builder, info.locale(), placeholders).build();
+    return definition.toBuilder(config, info.locale(), placeholders, guild, reply.getUser())
+        .build();
   }
 }
