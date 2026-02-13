@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
-import net.dv8tion.jda.api.utils.TimeUtil;
 
 import java.awt.*;
 import java.time.Duration;
@@ -27,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 @AllArgsConstructor
 public class HourlyScheduler {
     private static final int REMIND_INTERVAL_HOURS = 24;
-    private static final int REMIND_SUPPORTER_HOURS = 24;
     private static final int AUTO_CLOSE_HOURS = 96;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -53,7 +51,6 @@ public class HourlyScheduler {
         List<Integer> ticketsIds = ticketData.getOpenTicketsIds();
         int userReminders = 0;
         int autoClosures = 0;
-        int supporterReminders = 0;
         int ratingReminders = 0;
         int ratingAutoClosures = 0;
 
@@ -76,14 +73,6 @@ public class HourlyScheduler {
                     ticket.getWaitingSince()
                             .plus(AUTO_CLOSE_HOURS, ChronoUnit.HOURS)
                             .isBefore(Instant.now());
-
-            boolean shouldRemindSupporter = !ticket.isWaiting() &&
-                    !ticket.isPendingRating() &&
-                    ticket.getSupporter() != null &&
-                    ticket.getTextChannel() != null &&
-                    !ticket.getTextChannel().getLatestMessageId().equals("0") &&
-                    TimeUtil.getTimeCreated(ticket.getTextChannel().getLatestMessageIdLong()).plusHours((long) REMIND_SUPPORTER_HOURS * (ticket.getSupporterRemindersSent() + 1))
-                            .isBefore(Instant.now().atZone(ZoneId.of("UTC")).toOffsetDateTime());
 
             if (shouldClose) {
                 // Award XP (async - sends full ticket data, no rating since auto-closed)
@@ -126,11 +115,6 @@ public class HourlyScheduler {
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
                 userReminders++;
-            } else if (shouldRemindSupporter) {
-                ticket.getThreadChannel().sendMessage(ticket.getSupporter().getAsMention()).queue();
-
-                ticket.setSupporterRemindersSent(ticket.getSupporterRemindersSent() + 1);
-                supporterReminders++;
             }
 
             if (ticket.isPendingRating() && ticket.getPendingRatingSince() != null) {
@@ -168,7 +152,7 @@ public class HourlyScheduler {
                 }
             }
 
-            log.debug("Should remind: {}, Should close: {}, Should remind supporter: {}", shouldRemind, shouldClose, shouldRemindSupporter);
+            log.debug("Should remind: {}, Should close: {}", shouldRemind, shouldClose);
 
             try {
                 TimeUnit.SECONDS.sleep(10L);
@@ -177,17 +161,16 @@ public class HourlyScheduler {
             }
         }
 
-        sendProcessingSummary(userReminders, supporterReminders, autoClosures, ratingReminders, ratingAutoClosures, ticketsIds.size());
+        sendProcessingSummary(userReminders, autoClosures, ratingReminders, ratingAutoClosures, ticketsIds.size());
     }
 
-    private void sendProcessingSummary(int userReminders, int supporterReminders, int autoClosures, int ratingReminders, int ratingAutoClosures, int totalTickets) {
-        if (config.getLogChannel() != 0 && (userReminders != 0 || supporterReminders != 0 || autoClosures != 0 || ratingReminders != 0 || ratingAutoClosures != 0)) {
+    private void sendProcessingSummary(int userReminders, int autoClosures, int ratingReminders, int ratingAutoClosures, int totalTickets) {
+        if (config.getLogChannel() != 0 && (userReminders != 0 || autoClosures != 0 || ratingReminders != 0 || ratingAutoClosures != 0)) {
             EmbedBuilder summaryBuilder = new EmbedBuilder()
                     .setTitle("📊 Hourly Ticket Processing Summary")
                     .setColor(Color.decode(config.getColor()))
                     .addField("Total Tickets Processed", "`" + totalTickets + "`", false)
                     .addField("User Reminders Sent", "`" + userReminders + "`", false)
-                    .addField("Supporter Reminders Sent", "`" + supporterReminders + "`", false)
                     .addField("Auto-Closures", "`" + autoClosures + "`", false)
                     .addField("Rating Reminders Sent", "`" + ratingReminders + "`", false)
                     .addField("Rating Auto-Closures", "`" + ratingAutoClosures + "`", false)
