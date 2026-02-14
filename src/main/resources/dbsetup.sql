@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS tickets
 
     remindersSent          INTEGER DEFAULT 0    NOT NULL,
 
-    supporterRemindersSent INTEGER DEFAULT 0    NOT NULL,
-
     closeMessage           VARCHAR DEFAULT NULL NULL,
 
     category               VARCHAR DEFAULT ""   NOT NULL,
@@ -38,7 +36,9 @@ CREATE TABLE IF NOT EXISTS tickets
 
     ratingRemindersSent    INTEGER DEFAULT 0    NOT NULL,
 
-    pendingCloser          VARCHAR DEFAULT ""   NOT NULL
+    pendingCloser          VARCHAR DEFAULT ""   NOT NULL,
+
+    lastSupporterMessageAt BIGINT DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS messages
 (
