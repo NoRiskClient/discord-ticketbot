@@ -8,6 +8,7 @@ import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.entities.Ticket;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.util.Result;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import net.dv8tion.jda.api.JDA;
@@ -24,6 +25,8 @@ public class TicketCreationModalInteraction extends Interaction {
       @NotNull TicketCategory category) {
     super(config, ticketService, jda);
     this.category = category;
+    this.permissionsRequired = false;
+    this.ticketChannelRequired = false;
   }
 
   @Override
@@ -52,7 +55,9 @@ public class TicketCreationModalInteraction extends Interaction {
             return new EmbedBuildInfo(
                 Embeds.TICKET_CREATION_FAILED,
                 event.getInteraction().getUserLocale().toLocale(),
-                Map.of("ERROR", Optional.ofNullable(result.getError()).orElse("Unknown error")));
+                new HashMap<>(
+                    Map.of(
+                        "ERROR", Optional.ofNullable(result.getError()).orElse("Unknown error"))));
           }
         });
   }

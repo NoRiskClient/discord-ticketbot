@@ -166,7 +166,6 @@ public class Main {
                     "selection.category.placeholder", channel.getGuild().getLocale().toLocale()));
 
     for (TicketCategory category : TicketCategory.values()) {
-
       selectionBuilder.addOption(
           TranslationUtils.translate(
               "category.label." + category.getId(), channel.getGuild().getLocale().toLocale()),
