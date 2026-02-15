@@ -21,10 +21,19 @@ public class Embeds {
       success(
           "message.ticket.creation.success.title", "message.ticket.creation.success.description");
 
-  public static final EmbedDefinition TICKET_BASE_MESSAGE =
+  public static final EmbedDefinition BASE_MESSAGE =
       new EmbedDefinition(
           "message.base_message.title",
           "message.base_message.description",
+          false,
+          true,
+          List.of(),
+          null);
+
+  public static final EmbedDefinition VERSION_INFO =
+      new EmbedDefinition(
+          "message.version_info.title",
+          "message.version_info.description",
           false,
           true,
           List.of(),

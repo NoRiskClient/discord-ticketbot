@@ -4,6 +4,7 @@ import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.interaction.ArgumentedInteraction;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
+import gg.norisk.ticketbot.interaction.commands.VersionCommand;
 import gg.norisk.ticketbot.interaction.modal.TicketCreationModalInteraction;
 import gg.norisk.ticketbot.interaction.selections.CategorySelectionInteraction;
 import gg.norisk.ticketbot.util.TranslationUtils;
@@ -19,6 +20,10 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
@@ -105,7 +110,23 @@ public class Main {
     log.debug("Registering interactions...");
 
     registerTicketCreationInteractions(config, ticketService, jda);
-    registerInteractions(config, ticketService, jda, CategorySelectionInteraction::new);
+    registerInteractions(
+        config, ticketService, jda, CategorySelectionInteraction::new, VersionCommand::new);
+
+    log.debug("Registering commands...");
+
+    SlashCommandData parent = Commands.slash("ticket", "Manage the ticket system");
+
+    for (Map.Entry<SubcommandGroupData, List<SubcommandData>> entry :
+        Interaction.COMMANDS.entrySet()) {
+      if (entry.getKey() == null) {
+        parent.addSubcommands(entry.getValue());
+      } else {
+        parent.addSubcommandGroups(entry.getKey());
+      }
+    }
+
+    jda.updateCommands().addCommands(parent).queue();
 
     jda.addEventListener(new EventListener());
 
@@ -178,7 +199,7 @@ public class Main {
     Message message =
         channel
             .sendMessageEmbeds(
-                Embeds.TICKET_BASE_MESSAGE.toBuilder(
+                Embeds.BASE_MESSAGE.toBuilder(
                         config,
                         channel.getGuild().getLocale().toLocale(),
                         Map.of(),

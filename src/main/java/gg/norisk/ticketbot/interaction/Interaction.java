@@ -69,8 +69,15 @@ public abstract class Interaction {
       @Nullable SubcommandGroupData group,
       @Nullable Function<SubcommandData, SubcommandData> options) {
     SubcommandData command = new SubcommandData(name, description);
-    if (options != null) command = options.apply(command);
-    if (group != null) group.addSubcommands(command);
+
+    if (options != null) {
+      command = options.apply(command);
+    }
+
+    if (group != null) {
+      group.addSubcommands(command);
+    }
+
     COMMANDS.computeIfAbsent(group, k -> new ArrayList<>()).add(command);
   }
 
