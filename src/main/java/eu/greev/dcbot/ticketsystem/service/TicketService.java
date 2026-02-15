@@ -372,6 +372,8 @@ public class TicketService {
                 Role role = ticket.getTextChannel().getGuild().getRoleById(id);
                 if (role != null) {
                     ticket.getTextChannel().upsertPermissionOverride(role).setAllowed(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY).queue();
+                } else {
+                    log.warn("Couldn't find role {} for category {}", id, ticket.getCategory().getId());
                 }
             }
         } else {
