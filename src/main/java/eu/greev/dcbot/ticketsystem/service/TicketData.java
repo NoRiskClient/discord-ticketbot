@@ -144,7 +144,7 @@ public class TicketData {
             return jdbi.withHandle(handle -> {
                 // If no ticketID (0), INSERT and return generated key; otherwise UPDATE and return existing id
                 if (ticket.getId() == 0) {
-                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                     update
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
