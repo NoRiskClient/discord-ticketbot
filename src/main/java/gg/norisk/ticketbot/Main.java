@@ -5,7 +5,7 @@ import gg.norisk.ticketbot.interaction.ArgumentedInteraction;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
 import gg.norisk.ticketbot.interaction.commands.VersionCommand;
-import gg.norisk.ticketbot.interaction.modal.TicketCreationModalInteraction;
+import gg.norisk.ticketbot.interaction.modals.TicketCreationModalInteraction;
 import gg.norisk.ticketbot.interaction.selections.CategorySelectionInteraction;
 import gg.norisk.ticketbot.util.TranslationUtils;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package gg.norisk.ticketbot.interaction.modal;
+package gg.norisk.ticketbot.interaction.modals;
 
 import gg.norisk.ticketbot.Config;
 import gg.norisk.ticketbot.TicketCategory;
