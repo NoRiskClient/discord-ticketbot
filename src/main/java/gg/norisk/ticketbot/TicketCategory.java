@@ -86,5 +86,12 @@ public enum TicketCategory {
     return info;
   }
 
+  public static TicketCategory fromId(String id) {
+    return Arrays.stream(values())
+        .filter(category -> category.id.equals(id))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("No category with id " + id));
+  }
+
   private record ModalField(String id, TextInputStyle style, int maxLength, boolean required) {}
 }

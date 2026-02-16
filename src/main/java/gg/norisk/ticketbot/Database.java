@@ -36,12 +36,20 @@ public class Database {
     dataSource.setUrl(url);
     jdbi = Jdbi.create(dataSource);
 
+    log.debug(dataSource.getUrl());
+
     try (InputStream stream = getClass().getClassLoader().getResourceAsStream("dbsetup.sql")) {
       if (stream == null) {
         throw new IOException("Database setup script not found");
       }
+
       String sql = new String(stream.readAllBytes());
-      jdbi.useHandle(handle -> handle.execute(sql));
+
+      for (String statement : sql.split(";")) {
+        if (!statement.trim().isEmpty()) {
+          jdbi.withHandle(handle -> handle.createUpdate(statement).execute());
+        }
+      }
     }
 
     migrate();
@@ -138,5 +146,59 @@ public class Database {
     }
 
     return ticket;
+  }
+
+  public int saveTicket(Ticket ticket) {
+    if (ticket.getId() == 0) {
+      int id =
+          jdbi.withHandle(
+              handle ->
+                  handle
+                      .createUpdate(
+                          "INSERT INTO tickets (category, ownerId, createdAt, closedAt, channelId, supporterId, closerId) "
+                              + "VALUES (:category, :ownerId, :createdAt, :closedAt, :channelId, :supporterId, :closerId)")
+                      .bind("category", ticket.getCategory().getId())
+                      .bind("createdAt", ticket.getCreatedAt().toEpochMilli())
+                      .bind(
+                          "closedAt",
+                          ticket.getClosedAt() != null ? ticket.getClosedAt().toEpochMilli() : 0)
+                      .bind("ownerId", ticket.getOwner().getId())
+                      .bind(
+                          "channelId",
+                          ticket.getChannel() != null ? ticket.getChannel().getId() : "")
+                      .bind(
+                          "supporterId",
+                          ticket.getSupporter() != null ? ticket.getSupporter().getId() : "")
+                      .bind(
+                          "closerId", ticket.getCloser() != null ? ticket.getCloser().getId() : "")
+                      .executeAndReturnGeneratedKeys("id")
+                      .mapTo(int.class)
+                      .one());
+
+      ticket.setId(id);
+      ticketByIdCache.put(id, ticket);
+      return id;
+    } else {
+      jdbi.useHandle(
+          handle ->
+              handle
+                  .createUpdate(
+                      "UPDATE tickets SET category = :category, ownerId = :ownerId, createdAt = :createdAt, closedAt = :closedAt channelId = :channelId, "
+                          + "supporterId = :supporterId, closerId = :closerId WHERE id = :id")
+                  .bind("category", ticket.getCategory().getId())
+                  .bind("createdAt", ticket.getCreatedAt().toEpochMilli())
+                  .bind(
+                      "closedAt",
+                      ticket.getClosedAt() != null ? ticket.getClosedAt().toEpochMilli() : 0)
+                  .bind("ownerId", ticket.getOwner().getId())
+                  .bind("channelId", ticket.getChannel() != null ? ticket.getChannel().getId() : "")
+                  .bind(
+                      "supporterId",
+                      ticket.getSupporter() != null ? ticket.getSupporter().getId() : "")
+                  .bind("closerId", ticket.getCloser() != null ? ticket.getCloser().getId() : "")
+                  .bind("id", ticket.getId())
+                  .execute());
+      return ticket.getId();
+    }
   }
 }

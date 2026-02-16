@@ -38,7 +38,7 @@ public class Main {
   public static @Nullable String BASE_MESSAGE_ID;
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    log.info("Starting ticket bot v{}...", VERSION);
+    log.info("Starting discord-ticketbot v{}...", VERSION);
 
     log.debug("Loading configuration...");
 
@@ -105,7 +105,7 @@ public class Main {
 
     updateBaseMessage(config, database, jda);
 
-    TicketService ticketService = new TicketService(database);
+    TicketService ticketService = new TicketService(config, database, jda);
 
     log.debug("Registering interactions...");
 

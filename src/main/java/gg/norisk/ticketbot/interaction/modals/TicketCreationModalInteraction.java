@@ -50,7 +50,7 @@ public class TicketCreationModalInteraction extends Interaction {
             return new EmbedBuildInfo(
                 Embeds.TICKET_CREATION_SUCCESS,
                 event.getInteraction().getUserLocale().toLocale(),
-                Map.of("CHANNEL", result.getValue().getChannel().getId()));
+                new HashMap<>(Map.of("CHANNEL", result.getValue().getChannel().getId())));
           } else {
             return new EmbedBuildInfo(
                 Embeds.TICKET_CREATION_FAILED,
