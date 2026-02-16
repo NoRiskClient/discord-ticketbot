@@ -13,7 +13,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
@@ -168,21 +167,14 @@ public abstract class Interaction {
   }
 
   private MessageEmbed build(EmbedBuildInfo info) {
-    Guild guild = jda.getGuildById(config.getGuildId());
-
-    if (guild == null) {
-      log.error(
-          "Guild with ID {} not found for interaction {}", config.getGuildId(), getIdentifier());
-      throw new IllegalStateException("Guild not found");
-    }
-
     EmbedDefinition definition = info.definition();
     Map<String, String> placeholders =
         info.placeholders() != null ? info.placeholders() : new HashMap<>();
 
     placeholders.put("USER_MENTION", reply.getUser().getAsMention());
 
-    return definition.toBuilder(config, info.locale(), placeholders, guild, reply.getUser())
+    return definition.toBuilder(
+            config, info.locale(), placeholders, config.getGuild(jda), reply.getUser())
         .build();
   }
 }
