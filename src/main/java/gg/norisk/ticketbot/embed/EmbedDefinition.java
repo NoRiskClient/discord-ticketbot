@@ -6,22 +6,18 @@ import java.awt.*;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.User;
 import org.jetbrains.annotations.Nullable;
 
-@AllArgsConstructor
-public class EmbedDefinition {
-  @Getter private final String title;
-  @Getter private final String description;
-  @Getter private final boolean userAuthor;
-  @Getter private final boolean serverFooter;
-  @Getter private final List<Field> fields;
-  @Nullable @Getter private final Integer color;
-
+public record EmbedDefinition(
+    String title,
+    String description,
+    boolean userAuthor,
+    boolean serverFooter,
+    List<Field> fields,
+    @Nullable Integer color) {
   public EmbedBuilder toBuilder(
       Config config,
       Locale locale,
