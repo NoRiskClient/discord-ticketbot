@@ -248,7 +248,7 @@ public class TicketData {
 
     public Map<String, Map<String, String>> longestSinceLastSupporterMessage(int limit) {
         long now = Instant.now().getEpochSecond();
-        return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, channelID, lastSupporterMessageAt FROM tickets WHERE isOpen = true AND supporter != '' AND :now - 43200 > lastSupporterMessageAt AND isWaiting = false ORDER BY lastSupporterMessageAt ASC LIMIT :limit")
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, channelID, lastSupporterMessageAt FROM tickets WHERE isOpen = true AND supporter != '' AND :now - 43200 > lastSupporterMessageAt AND isWaiting = false AND pendingRatingSince IS NULL ORDER BY lastSupporterMessageAt ASC LIMIT :limit")
                 .bind("limit", limit)
                 .bind("now", now)
                 .reduceRows(new LinkedHashMap<>(), (map, row) -> {
