@@ -24,13 +24,11 @@ public enum TicketCategory {
       new ModalField("name", TextInputStyle.SHORT, 16, true),
       new ModalField("links", TextInputStyle.PARAGRAPH, 200, true),
       new ModalField("information", TextInputStyle.PARAGRAPH, 700, false)),
-
   PAYMENT(
       "payment",
       true,
       new ModalField("problem", TextInputStyle.PARAGRAPH, 700, true),
       new ModalField("name", TextInputStyle.SHORT, 16, true)),
-
   REPORT(
       "report",
       true,
@@ -55,16 +53,17 @@ public enum TicketCategory {
             id,
             MessageFormat.format(
                 TranslationUtils.translate("modal.create_ticket.title", locale),
-                TranslationUtils.translate("category.label." + id, locale)));
+                TranslationUtils.translate("category." + id + ".label", locale)));
 
     for (ModalField field : modalFields) {
       TextInput input =
           TextInput.create(
                   field.id,
-                  TranslationUtils.translate("category.label." + id + "." + field.id, locale),
+                  TranslationUtils.translate("category." + id + "." + field.id + ".label", locale),
                   field.style)
               .setPlaceholder(
-                  TranslationUtils.translate("category.description." + id + "." + field.id, locale))
+                  TranslationUtils.translate(
+                      "category." + id + "." + field.id + ".description", locale))
               .setRequired(field.required)
               .setMaxLength(field.maxLength)
               .build();
@@ -81,7 +80,7 @@ public enum TicketCategory {
           Optional.ofNullable(interaction.getValue(field.id))
               .map(ModalMapping::getAsString)
               .orElse("N/A");
-      info.put(id, value);
+      info.put(field.id, value);
     }
     return info;
   }

@@ -1,9 +1,13 @@
 package gg.norisk.ticketbot.entities;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import gg.norisk.ticketbot.TicketCategory;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,6 +25,7 @@ public class Ticket {
   private int id;
   private TicketCategory category;
   private User owner;
+  private Map<String, String> info;
   private Instant createdAt;
   private @Nullable Instant closedAt;
   private @Nullable TextChannel channel;
@@ -38,6 +43,10 @@ public class Ticket {
     public Ticket map(ResultSet r, int columnNumber, StatementContext ctx) throws SQLException {
       TicketCategory category = TicketCategory.fromId(r.getString("category"));
       User owner = jda.getUserById(r.getString("ownerId"));
+      LinkedHashMap<String, String> info =
+          new Gson()
+              .fromJson(
+                  r.getString("info"), new TypeToken<LinkedHashMap<String, String>>() {}.getType());
       Instant createdAt = Instant.ofEpochMilli(r.getLong("createdAt"));
       Instant closedAt =
           r.getLong("closedAt") == 0 ? null : Instant.ofEpochMilli(r.getLong("closedAt"));
@@ -58,6 +67,7 @@ public class Ticket {
           .id(r.getInt("id"))
           .category(category)
           .owner(owner)
+          .info(info)
           .createdAt(createdAt)
           .closedAt(closedAt)
           .channel(channel)

@@ -189,10 +189,10 @@ public class Main {
     for (TicketCategory category : TicketCategory.values()) {
       selectionBuilder.addOption(
           TranslationUtils.translate(
-              "category.label." + category.getId(), channel.getGuild().getLocale().toLocale()),
+              "category." + category.getId() + ".label", channel.getGuild().getLocale().toLocale()),
           category.getId(),
           TranslationUtils.translate(
-              "category.description." + category.getId(),
+              "category." + category.getId() + ".description",
               channel.getGuild().getLocale().toLocale()));
     }
 

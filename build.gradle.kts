@@ -26,7 +26,7 @@ dependencies {
     implementation("org.apache.logging.log4j", "log4j-core", "2.25.1")
     implementation("org.apache.logging.log4j", "log4j-slf4j2-impl", "2.25.1")
     implementation("me.carleslc.Simple-YAML", "Simple-Yaml", "1.8.3")
-    implementation("com.fasterxml.jackson.core", "jackson-databind", "2.16.1")
+    implementation("com.google.code.gson", "gson", "2.13.2")
     implementation("com.github.Ryzeon", "discord-html-transcripts", "2.1")
     implementation("com.github.ben-manes.caffeine", "caffeine", "3.2.3")
 

@@ -42,7 +42,8 @@ public class TicketCreationModalInteraction extends Interaction {
               ticketService.createTicket(
                   category.extractInfo(event.getInteraction()),
                   category,
-                  event.getInteraction().getUser());
+                  event.getInteraction().getUser(),
+                  event.getUserLocale().toLocale());
 
           if (result.getError() == null
               && result.getValue() != null
