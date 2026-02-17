@@ -38,6 +38,9 @@ public class TicketData {
 
                     String category = resultSet.getString("category");
 
+                    Long lastSupporterMessageAt = resultSet.getLong("lastSupporterMessageAt");
+                    boolean lastSupporterMessageAtWasNull = resultSet.wasNull();
+
                     ObjectMapper mapper = new ObjectMapper();
 
                     Ticket.TicketBuilder ticketBuilder;
@@ -57,7 +60,7 @@ public class TicketData {
                                 .closeMessage(resultSet.getString("closeMessage"))
                                 .waitingSince(resultSet.getString("waitingSince") != null ? Instant.parse(resultSet.getString("waitingSince")) : null)
                                 .baseMessage(resultSet.getString("baseMessage"))
-                                .lastSupporterMessageAt(resultSet.getLong("lastSupporterMessageAt"))
+                                .lastSupporterMessageAt(lastSupporterMessageAtWasNull ? null : lastSupporterMessageAt)
                                 .involved(new ArrayList<>(List.of(resultSet.getString("involved").split(", "))));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
