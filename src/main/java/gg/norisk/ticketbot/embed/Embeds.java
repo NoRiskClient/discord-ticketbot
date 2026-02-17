@@ -39,6 +39,20 @@ public class Embeds {
           List.of(),
           null);
 
+  public static final EmbedDefinition INITIAL_MESSAGE =
+      new EmbedDefinition(
+          null,
+          "message.ticket.initial.description",
+          true,
+          true,
+          List.of(
+              new EmbedDefinition.Field("message.ticket.initial.field.id", "$ID", true),
+              new EmbedDefinition.Field("message.ticket.initial.field.category", "$CATEGORY", true),
+              new EmbedDefinition.Field(
+                  "message.ticket.initial.field.owner", "$USER_MENTION", true),
+              new EmbedDefinition.Field("**▬▬▬▬▬**", "$DETAILS")),
+          null);
+
   private static EmbedDefinition success(@Nullable String title, @Nullable String message) {
     return new EmbedDefinition(title, message, true, true, List.of(), 0x00FF00);
   }

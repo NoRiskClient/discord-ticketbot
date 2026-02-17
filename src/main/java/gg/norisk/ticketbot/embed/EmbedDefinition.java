@@ -66,5 +66,9 @@ public record EmbedDefinition(
     return string;
   }
 
-  public record Field(String name, String value, boolean inline) {}
+  public record Field(String name, String value, boolean inline) {
+    public Field(String name, String value) {
+      this(name, value, false);
+    }
+  }
 }

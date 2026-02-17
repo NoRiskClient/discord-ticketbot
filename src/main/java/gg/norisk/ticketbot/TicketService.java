@@ -1,12 +1,11 @@
 package gg.norisk.ticketbot;
 
-import gg.norisk.ticketbot.embed.EmbedDefinition;
+import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.entities.Ticket;
 import gg.norisk.ticketbot.util.Result;
 import gg.norisk.ticketbot.util.TranslationUtils;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -57,31 +56,26 @@ public class TicketService {
           .append("\n");
     }
 
-    List<EmbedDefinition.Field> fields =
-        List.of(
-            new EmbedDefinition.Field(
-                "message.ticket.initial.field.id", "`" + ticket.getId() + "`", true),
-            new EmbedDefinition.Field(
-                "message.ticket.initial.field.category",
-                "category." + category.getId() + ".label",
-                true),
-            new EmbedDefinition.Field(
-                "message.ticket.initial.field.owner", owner.getAsMention(), true),
-            new EmbedDefinition.Field("**▬▬▬▬▬**", details.toString(), false));
-
     channel
         .sendMessage(owner.getAsMention())
         .addEmbeds(
-            new EmbedDefinition(
-                    null, "message.ticket.initial.description", true, true, fields, null)
-                .toBuilder(
-                        config,
-                        locale,
-                        new HashMap<>(Map.of("USER_MENTION", owner.getAsMention())),
-                        config.getGuild(jda),
-                        owner)
-                    .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
-                    .build())
+            Embeds.INITIAL_MESSAGE.toBuilder(
+                    config,
+                    locale,
+                    new HashMap<>(
+                        Map.of(
+                            "ID",
+                            String.valueOf(id),
+                            "CATEGORY",
+                            ticket.getCategory().getId(),
+                            "USER_MENTION",
+                            owner.getAsMention(),
+                            "DETAILS",
+                            details.toString())),
+                    config.getGuild(jda),
+                    owner)
+                .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
+                .build())
         .queue();
 
     return Result.success(ticket);
