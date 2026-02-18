@@ -2,7 +2,14 @@ package gg.norisk.ticketbot.interaction.mixed;
 
 import gg.norisk.ticketbot.Config;
 import gg.norisk.ticketbot.TicketService;
+import gg.norisk.ticketbot.embed.EmbedBuildInfo;
+import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.interaction.Interaction;
+import gg.norisk.ticketbot.util.Result;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -30,5 +37,21 @@ public class TicketClaimInteraction extends Interaction {
     handleShared(event);
   }
 
-  private void handleShared(IReplyCallback event) {}
+  private void handleShared(IReplyCallback event) {
+    Result<Void> result =
+        ticketService.claimTicket(Objects.requireNonNull(ticket), event.getUser());
+
+    if (result.isFailure()) {
+      replyEphemeralAndQueue(
+          new EmbedBuildInfo(
+              Embeds.TICKET_CLAIM_FAILED,
+              ticket.getLocale(),
+              new HashMap<>(
+                  Map.of(
+                      "ERROR", Optional.ofNullable(result.getError()).orElse("Unknown error")))));
+    } else {
+      replyEphemeralAndQueue(
+          new EmbedBuildInfo(Embeds.TICKET_CLAIM_SUCCESS, ticket.getLocale(), null));
+    }
+  }
 }

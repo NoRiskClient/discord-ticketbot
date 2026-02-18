@@ -53,6 +53,21 @@ public class Embeds {
               new EmbedDefinition.Field("**▬▬▬▬▬**", "$DETAILS")),
           null);
 
+  public static final EmbedDefinition TICKET_CLAIM =
+      new EmbedDefinition(
+          "message.ticket.claim.title",
+          "message.ticket.claim.description",
+          true,
+          true,
+          List.of(),
+          null);
+
+  public static final EmbedDefinition TICKET_CLAIM_FAILED =
+      failure("message.ticket.claim.failed.title", "message.ticket.claim.failed.description");
+
+  public static final EmbedDefinition TICKET_CLAIM_SUCCESS =
+      success("message.ticket.claim.success.title", "message.ticket.claim.success.description");
+
   private static EmbedDefinition success(@Nullable String title, @Nullable String message) {
     return new EmbedDefinition(title, message, true, true, List.of(), 0x00FF00);
   }

@@ -8,12 +8,14 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @AllArgsConstructor
@@ -80,6 +82,30 @@ public class TicketService {
         .queue();
 
     return Result.success(ticket);
+  }
+
+  public Result<Void> claimTicket(@NotNull Ticket ticket, @NotNull User supporter) {
+    if (ticket.getOwner().getIdLong() == supporter.getIdLong()) {
+      return Result.failure(
+          TranslationUtils.translate(
+              "message.ticket.claim.error.supporter_is_owner", ticket.getLocale()));
+    }
+
+    ticket.setSupporter(supporter);
+    database.saveTicket(ticket);
+
+    Objects.requireNonNull(ticket.getChannel())
+        .sendMessageEmbeds(
+            Embeds.TICKET_CLAIM.toBuilder(
+                    config,
+                    ticket.getLocale(),
+                    new HashMap<>(Map.of("SUPPORTER_MENTION", supporter.getAsMention())),
+                    config.getGuild(jda),
+                    supporter)
+                .build())
+        .queue();
+
+    return Result.success(null);
   }
 
   public boolean isTicketChannel(Channel channel) {
