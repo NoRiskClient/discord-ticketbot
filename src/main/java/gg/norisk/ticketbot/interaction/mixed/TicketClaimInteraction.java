@@ -20,6 +20,7 @@ public class TicketClaimInteraction extends Interaction {
   public TicketClaimInteraction(
       @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
     super(config, ticketService, jda);
+    addCommand("Makes you the new supporter of the ticket");
   }
 
   @Override
