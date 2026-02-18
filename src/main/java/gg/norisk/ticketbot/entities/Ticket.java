@@ -29,6 +29,7 @@ public class Ticket {
   private Locale locale;
   private Map<String, String> info;
   private Instant createdAt;
+  private @Nullable Instant claimedAt;
   private @Nullable Instant closedAt;
   private @Nullable TextChannel channel;
   private @Nullable User supporter;
@@ -51,6 +52,8 @@ public class Ticket {
               .fromJson(
                   r.getString("info"), new TypeToken<LinkedHashMap<String, String>>() {}.getType());
       Instant createdAt = Instant.ofEpochMilli(r.getLong("createdAt"));
+      Instant claimedAt =
+          r.getLong("claimedAt") == 0 ? null : Instant.ofEpochMilli(r.getLong("claimedAt"));
       Instant closedAt =
           r.getLong("closedAt") == 0 ? null : Instant.ofEpochMilli(r.getLong("closedAt"));
       TextChannel channel =
@@ -73,6 +76,7 @@ public class Ticket {
           .locale(locale)
           .info(info)
           .createdAt(createdAt)
+          .claimedAt(claimedAt)
           .closedAt(closedAt)
           .channel(channel)
           .supporter(supporter)

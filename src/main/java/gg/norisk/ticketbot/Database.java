@@ -156,11 +156,14 @@ public class Database {
               handle ->
                   handle
                       .createUpdate(
-                          "INSERT INTO tickets (category, ownerId, locale, info, createdAt, closedAt, channelId, supporterId, closerId) "
-                              + "VALUES (:category, :ownerId, :locale, :info, :createdAt, :closedAt, :channelId, :supporterId, :closerId)")
+                          "INSERT INTO tickets (category, ownerId, locale, info, createdAt, claimedAt, closedAt, channelId, supporterId, closerId) "
+                              + "VALUES (:category, :ownerId, :locale, :info, :createdAt, :claimedAt, :closedAt, :channelId, :supporterId, :closerId)")
                       .bind("category", ticket.getCategory().getId())
                       .bind("info", new Gson().toJson(ticket.getInfo()))
                       .bind("createdAt", ticket.getCreatedAt().toEpochMilli())
+                      .bind(
+                          "claimedAt",
+                          ticket.getClaimedAt() != null ? ticket.getClaimedAt().toEpochMilli() : 0)
                       .bind(
                           "closedAt",
                           ticket.getClosedAt() != null ? ticket.getClosedAt().toEpochMilli() : 0)
@@ -186,11 +189,14 @@ public class Database {
           handle ->
               handle
                   .createUpdate(
-                      "UPDATE tickets SET category = :category, ownerId = :ownerId, locale = :locale,  info = :info, createdAt = :createdAt, closedAt = :closedAt channelId = :channelId, "
+                      "UPDATE tickets SET category = :category, ownerId = :ownerId, locale = :locale,  info = :info, createdAt = :createdAt, claimedAt = :claimedAt, closedAt = :closedAt channelId = :channelId, "
                           + "supporterId = :supporterId, closerId = :closerId WHERE id = :id")
                   .bind("category", ticket.getCategory().getId())
                   .bind("info", new Gson().toJson(ticket.getInfo()))
                   .bind("createdAt", ticket.getCreatedAt().toEpochMilli())
+                  .bind(
+                      "claimedAt",
+                      ticket.getClaimedAt() != null ? ticket.getClaimedAt().toEpochMilli() : 0)
                   .bind(
                       "closedAt",
                       ticket.getClosedAt() != null ? ticket.getClosedAt().toEpochMilli() : 0)

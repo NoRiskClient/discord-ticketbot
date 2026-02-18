@@ -91,6 +91,10 @@ public class TicketService {
               "message.ticket.claim.error.supporter_is_owner", ticket.getLocale()));
     }
 
+    if (ticket.getSupporter() == null) {
+      ticket.setClaimedAt(Instant.now());
+    }
+
     ticket.setSupporter(supporter);
     database.saveTicket(ticket);
 
