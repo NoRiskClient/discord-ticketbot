@@ -156,8 +156,8 @@ public class Database {
               handle ->
                   handle
                       .createUpdate(
-                          "INSERT INTO tickets (category, ownerId, info, createdAt, closedAt, channelId, supporterId, closerId) "
-                              + "VALUES (:category, :ownerId, :info, :createdAt, :closedAt, :channelId, :supporterId, :closerId)")
+                          "INSERT INTO tickets (category, ownerId, locale, info, createdAt, closedAt, channelId, supporterId, closerId) "
+                              + "VALUES (:category, :ownerId, :locale, :info, :createdAt, :closedAt, :channelId, :supporterId, :closerId)")
                       .bind("category", ticket.getCategory().getId())
                       .bind("info", new Gson().toJson(ticket.getInfo()))
                       .bind("createdAt", ticket.getCreatedAt().toEpochMilli())
@@ -165,6 +165,7 @@ public class Database {
                           "closedAt",
                           ticket.getClosedAt() != null ? ticket.getClosedAt().toEpochMilli() : 0)
                       .bind("ownerId", ticket.getOwner().getId())
+                      .bind("locale", ticket.getLocale().getLanguage())
                       .bind(
                           "channelId",
                           ticket.getChannel() != null ? ticket.getChannel().getId() : "")
@@ -185,7 +186,7 @@ public class Database {
           handle ->
               handle
                   .createUpdate(
-                      "UPDATE tickets SET category = :category, ownerId = :ownerId, info = :info, createdAt = :createdAt, closedAt = :closedAt channelId = :channelId, "
+                      "UPDATE tickets SET category = :category, ownerId = :ownerId, locale = :locale,  info = :info, createdAt = :createdAt, closedAt = :closedAt channelId = :channelId, "
                           + "supporterId = :supporterId, closerId = :closerId WHERE id = :id")
                   .bind("category", ticket.getCategory().getId())
                   .bind("info", new Gson().toJson(ticket.getInfo()))
@@ -194,6 +195,7 @@ public class Database {
                       "closedAt",
                       ticket.getClosedAt() != null ? ticket.getClosedAt().toEpochMilli() : 0)
                   .bind("ownerId", ticket.getOwner().getId())
+                  .bind("locale", ticket.getLocale().getLanguage())
                   .bind("channelId", ticket.getChannel() != null ? ticket.getChannel().getId() : "")
                   .bind(
                       "supporterId",

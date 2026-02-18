@@ -29,6 +29,7 @@ public class TicketService {
             .id(0)
             .category(category)
             .owner(owner)
+            .locale(locale)
             .info(info)
             .createdAt(Instant.now())
             .build();

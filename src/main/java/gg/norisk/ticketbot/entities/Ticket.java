@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +26,7 @@ public class Ticket {
   private int id;
   private TicketCategory category;
   private User owner;
+  private Locale locale;
   private Map<String, String> info;
   private Instant createdAt;
   private @Nullable Instant closedAt;
@@ -43,6 +45,7 @@ public class Ticket {
     public Ticket map(ResultSet r, int columnNumber, StatementContext ctx) throws SQLException {
       TicketCategory category = TicketCategory.fromId(r.getString("category"));
       User owner = jda.getUserById(r.getString("ownerId"));
+      Locale locale = Locale.of(r.getString("locale"));
       LinkedHashMap<String, String> info =
           new Gson()
               .fromJson(
@@ -67,6 +70,7 @@ public class Ticket {
           .id(r.getInt("id"))
           .category(category)
           .owner(owner)
+          .locale(locale)
           .info(info)
           .createdAt(createdAt)
           .closedAt(closedAt)
