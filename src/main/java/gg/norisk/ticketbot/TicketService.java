@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -79,6 +80,7 @@ public class TicketService {
                     owner)
                 .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
                 .build())
+        .setActionRow(Button.primary("claim", "Claim"))
         .queue();
 
     return Result.success(ticket);
