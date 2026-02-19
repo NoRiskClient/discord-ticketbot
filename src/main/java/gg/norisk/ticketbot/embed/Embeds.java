@@ -5,10 +5,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class Embeds {
   public static final EmbedDefinition INTERACTION_MISSING_PERMISSIONS =
-      failure("interaction.missing_permissions");
+      failure(
+          "message.interaction.missing_permissions.title",
+          "message.interaction.missing_permissions.description");
 
   public static final EmbedDefinition INTERACTION_WRONG_CHANNEL =
-      failure("interaction.wrong_channel");
+      failure(
+          "message.interaction.wrong_channel.title",
+          "message.interaction.wrong_channel.description");
 
   public static final EmbedDefinition TICKET_CREATION_FAILED = failure("ticket.creation");
 
