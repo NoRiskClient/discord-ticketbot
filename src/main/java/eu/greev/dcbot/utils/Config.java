@@ -35,6 +35,7 @@ public class Config {
     private int maxTicketsPerUser = 3;
     private List<Long> addToTicketThread;
     private List<Long> ratingNotificationChannels = new ArrayList<>();
+    private List<Long> lowRatingNotificationChannels = new ArrayList<>();
     private Map<Long, String> claimEmojis = new HashMap<>();
     private Map<String, Long> categories = new HashMap<>();
     private Map<String, List<Long>> categoryRoles = new HashMap<>();
