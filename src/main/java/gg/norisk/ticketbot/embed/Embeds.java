@@ -59,7 +59,8 @@ public class Embeds {
           List.of(),
           null);
 
-  public static final EmbedDefinition TICKET_CLAIM_FAILED = failure("ticket.claim");
+  public static final EmbedDefinition TICKET_CLAIM_FAILED =
+      failure("message.ticket.claim.failed.title", "$ERROR");
 
   public static final EmbedDefinition TICKET_CLAIM_SUCCESS = success("ticket.claim");
 
