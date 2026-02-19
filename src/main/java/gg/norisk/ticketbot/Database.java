@@ -189,8 +189,7 @@ public class Database {
           handle ->
               handle
                   .createUpdate(
-                      "UPDATE tickets SET category = :category, ownerId = :ownerId, locale = :locale,  info = :info, createdAt = :createdAt, claimedAt = :claimedAt, closedAt = :closedAt channelId = :channelId, "
-                          + "supporterId = :supporterId, closerId = :closerId WHERE id = :id")
+                      "UPDATE tickets SET category = :category, ownerId = :ownerId, locale = :locale,  info = :info, createdAt = :createdAt, claimedAt = :claimedAt, closedAt = :closedAt, channelId = :channelId, supporterId = :supporterId, closerId = :closerId WHERE id = :id")
                   .bind("category", ticket.getCategory().getId())
                   .bind("info", new Gson().toJson(ticket.getInfo()))
                   .bind("createdAt", ticket.getCreatedAt().toEpochMilli())

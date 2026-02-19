@@ -47,6 +47,7 @@ public class TicketService {
             .complete();
 
     ticket.setChannel(channel);
+    database.saveTicket(ticket);
 
     StringBuilder details = new StringBuilder();
 
@@ -89,9 +90,7 @@ public class TicketService {
 
   public Result<Void> claimTicket(@NotNull Ticket ticket, @NotNull User supporter) {
     if (ticket.getOwner().getIdLong() == supporter.getIdLong()) {
-      return Result.failure(
-          TranslationUtils.translate(
-              "message.ticket.claim.error.supporter_is_owner", ticket.getLocale()));
+      return Result.failure("supporter_is_owner");
     }
 
     if (ticket.getSupporter() == null) {

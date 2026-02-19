@@ -6,10 +6,10 @@ import gg.norisk.ticketbot.embed.EmbedBuildInfo;
 import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.util.Result;
+import gg.norisk.ticketbot.util.TranslationUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -49,7 +49,10 @@ public class TicketClaimInteraction extends Interaction {
               ticket.getLocale(),
               new HashMap<>(
                   Map.of(
-                      "ERROR", Optional.ofNullable(result.getError()).orElse("Unknown error")))));
+                      "ERROR",
+                      TranslationUtils.translate(
+                          "message.ticket.claim.error." + result.getError(),
+                          ticket.getLocale())))));
     } else {
       replyEphemeralAndQueue(
           new EmbedBuildInfo(Embeds.TICKET_CLAIM_SUCCESS, ticket.getLocale(), null));
