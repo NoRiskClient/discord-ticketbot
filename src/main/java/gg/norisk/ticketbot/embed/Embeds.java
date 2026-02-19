@@ -80,8 +80,8 @@ public class Embeds {
 
   private static EmbedDefinition failure(@Nullable String id) {
     return failure(
-        id == null ? null : "message." + id + ".success.title",
-        id == null ? null : "message." + id + ".success.description");
+        id == null ? null : "message." + id + ".failed.title",
+        id == null ? null : "message." + id + ".failed.description");
   }
 
   private static EmbedDefinition failure(@Nullable String name, @Nullable String description) {
