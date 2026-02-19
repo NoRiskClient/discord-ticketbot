@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -80,7 +81,7 @@ public class TicketService {
                     owner)
                 .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
                 .build())
-        .setActionRow(Button.primary("claim", "Claim"))
+        .setActionRow(Button.primary("claim", "Claim"), Button.danger("close", "Close"))
         .queue();
 
     return Result.success(ticket);
@@ -110,6 +111,21 @@ public class TicketService {
                     supporter)
                 .build())
         .queue();
+
+    return Result.success(null);
+  }
+
+  public Result<Void> closeTicket(
+      @NotNull Ticket ticket, @NotNull Member closer, @Nullable String reason) {
+    if (!closer.getRoles().contains(jda.getRoleById(config.getStaffId()))
+        && ticket.getSupporter() != null) {
+      return Result.failure("only_supporter_can_close");
+    }
+
+    ticket.setClosedAt(Instant.now());
+    ticket.setCloser(closer.getUser());
+
+    Objects.requireNonNull(ticket.getChannel()).delete().queue();
 
     return Result.success(null);
   }

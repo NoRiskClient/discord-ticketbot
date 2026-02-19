@@ -46,7 +46,7 @@ public abstract class Interaction {
   @Getter protected @Nullable Ticket ticket;
   @Getter protected IReplyCallback reply;
 
-  protected Interaction(
+  public Interaction(
       @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
     this.config = config;
     this.ticketService = ticketService;

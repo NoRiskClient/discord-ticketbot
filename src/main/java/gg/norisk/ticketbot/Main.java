@@ -6,6 +6,7 @@ import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
 import gg.norisk.ticketbot.interaction.commands.VersionCommand;
 import gg.norisk.ticketbot.interaction.mixed.TicketClaimInteraction;
+import gg.norisk.ticketbot.interaction.mixed.TicketCloseInteraction;
 import gg.norisk.ticketbot.interaction.modals.TicketCreationModalInteraction;
 import gg.norisk.ticketbot.interaction.selections.CategorySelectionInteraction;
 import gg.norisk.ticketbot.util.TranslationUtils;
@@ -117,7 +118,8 @@ public class Main {
         jda,
         CategorySelectionInteraction::new,
         VersionCommand::new,
-        TicketClaimInteraction::new);
+        TicketClaimInteraction::new,
+        TicketCloseInteraction::new);
 
     log.debug("Registering commands...");
 
