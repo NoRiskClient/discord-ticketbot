@@ -9,6 +9,7 @@ import lombok.Getter;
 import net.dv8tion.jda.api.JDA;
 import org.apache.logging.log4j.util.Strings;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.statement.Update;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -147,7 +148,7 @@ public class TicketData {
             return jdbi.withHandle(handle -> {
                 // If no ticketID (0), INSERT and return generated key; otherwise UPDATE and return existing id
                 if (ticket.getId() == 0) {
-                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    Update update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                     update
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")

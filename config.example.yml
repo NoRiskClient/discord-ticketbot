@@ -55,6 +55,10 @@ addToTicketThread:
 ratingNotificationChannels:
   - 123456789012345678
 
+# Can see sensitive ticket info
+privilegedSupporterRoles:
+  - 123456789012345678
+
 # Custom claim emojis per user (userId: emoji)
 claimEmojis:
   123456789012345678: "🎫"
@@ -72,7 +76,7 @@ categoryRoles:
     - 123456789012345678
 
 # XP System Integration (optional - leave empty to disable)
-# Backend API URL for awarding XP to helpers
+# Backend API URL for awarding XP to helpers (will append /tickets/award-xp)
 xpApiUrl: ""
 # API key for authentication
 xpApiKey: ""

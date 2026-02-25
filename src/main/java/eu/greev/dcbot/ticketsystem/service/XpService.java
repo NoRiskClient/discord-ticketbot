@@ -33,6 +33,7 @@ public class XpService {
      * Award XP to a helper for resolving a ticket.
      * This method collects ticket data and sends it to the API asynchronously.
      * No need to wait since we send the data directly (no channel fetch needed on backend).
+     * The backend API will send the XP notification in Discord.
      *
      * @param ticket        The ticket being closed
      * @param rating        The star rating given by the ticket owner (1-5), can be null if skipped
@@ -229,7 +230,7 @@ public class XpService {
      * @deprecated Use {@link #awardTicketXp(Ticket, Integer)} instead.
      * This old method is kept for backwards compatibility but should not be used.
      */
-    @Deprecated
+    @Deprecated(since = "2025-12-29")
     public boolean awardTicketXp(String channelId, String supporterId, Integer rating) {
         log.warn("[XP] Using deprecated awardTicketXp method - please update to use Ticket object");
         // This old method can't work properly anymore since we need full ticket data

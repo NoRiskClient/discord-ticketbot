@@ -6,13 +6,11 @@ import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.ticketsystem.service.XpService;
 import eu.greev.dcbot.utils.Config;
 import lombok.extern.slf4j.Slf4j;
-import me.ryzeon.transcripts.DiscordHtmlTranscripts;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.awt.*;
 
@@ -107,23 +105,8 @@ public class RatingSkip extends AbstractButton {
     }
 
     private String sendSkipNotification(Ticket ticket) {
-        // Generate HTML transcript and upload to log channel to get URL
-        String transcriptUrl = null;
-        try {
-            if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
-                FileUpload transcriptUpload = DiscordHtmlTranscripts.getInstance()
-                        .createTranscript(ticket.getTextChannel(), "transcript-" + ticket.getId() + ".html");
-
-                var logChannel = jda.getTextChannelById(config.getLogChannel());
-                if (logChannel != null) {
-                    var uploadMessage = logChannel.sendFiles(transcriptUpload).complete();
-                    // Use message jump URL instead of attachment URL for better Discord navigation
-                    transcriptUrl = uploadMessage.getJumpUrl();
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to generate/upload HTML transcript for ticket #{}", ticket.getId(), e);
-        }
+        // Generate transcript (will return null for sensitive categories)
+        String transcriptUrl = ticketService.sendTranscript(ticket);
 
         if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {
             return transcriptUrl;
@@ -144,17 +127,7 @@ public class RatingSkip extends AbstractButton {
             notification.setThumbnail(thumbnailUrl);
         }
 
-        // Only add transcript link for non-sensitive categories
-        if (transcriptUrl != null && !ticket.getCategory().isSensitive()) {
-            notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
-        }
-
-        for (Long channelId : config.getRatingNotificationChannels()) {
-            var channel = jda.getTextChannelById(channelId);
-            if (channel != null) {
-                channel.sendMessageEmbeds(notification.build()).queue();
-            }
-        }
+        ticketService.appendTranscriptLinkAndSendCloseEmbed(transcriptUrl, ticket, notification);
 
         return transcriptUrl;
     }

@@ -26,7 +26,7 @@ public class GetTranscript extends AbstractButton {
             event.replyEmbeds(error.build()).setEphemeral(true).queue();
             return;
         }
-        int ticketID = Integer.parseInt(event.getMessage().getEmbeds().get(0).getTitle().replace("Ticket #", ""));
+        int ticketID = Integer.parseInt(event.getMessage().getEmbeds().getFirst().getTitle().replace("Ticket #", ""));
         Ticket ticket = ticketService.getTicketByTicketId(ticketID);
 
         if (ticket == null) {
@@ -37,13 +37,24 @@ public class GetTranscript extends AbstractButton {
             return;
         }
 
+        boolean isSensitive = ticket.getCategory().isSensitive();
+        boolean isTicketOwner = event.getMember() != null && ticket.getOwner().getId().equals(event.getMember().getUser().getId()); // getMember can be null when user left the server
+        boolean isPrivilegedSupporter = ticketService.isUserPrivilegedSupporter(event.getMember());
+        if (isSensitive && !(isTicketOwner || isPrivilegedSupporter)) {
+            EmbedBuilder error = new EmbedBuilder()
+                    .setColor(Color.RED)
+                    .setDescription("❌ **This ticket category is marked as sensitive, transcript cannot be viewed by you!**");
+            event.replyEmbeds(error.build()).setEphemeral(true).queue();
+            return;
+        }
+
         event.getUser().openPrivateChannel()
                 .flatMap(channel -> channel.sendFiles(FileUpload.fromData(ticket.getTranscript().toFile(ticketID))))
                 .queue();
 
         EmbedBuilder builder = new EmbedBuilder()
                 .setFooter(config.getServerName(), config.getServerLogo())
-                .setAuthor(event.getMember().getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
+                .setAuthor(event.getMember() != null ? event.getMember().getEffectiveName() : "Unknown", null, event.getMember().getEffectiveAvatarUrl())
                 .setColor(Color.decode(config.getColor()))
                 .setDescription("Sent transcript of Ticket #" + ticketID + " via DM");
         event.replyEmbeds(builder.build()).setEphemeral(true).queue();

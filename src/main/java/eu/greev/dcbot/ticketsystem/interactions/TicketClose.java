@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.events.Event;
@@ -20,6 +21,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import java.awt.*;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Handles ticket closing with mandatory rating flow.
@@ -219,7 +221,7 @@ public class TicketClose implements Interaction {
                                     Button.success("rating-5-" + ticket.getId(), "⭐⭐⭐⭐⭐")
                             )
                             .addActionRow(
-                                    Button.danger("rating-skip-" + ticket.getId(), "Nein danke")
+                                    Button.danger("rating-skip-" + ticket.getId(), "No thanks")
                             ))
                     .queue(
                             success -> {
@@ -274,11 +276,11 @@ public class TicketClose implements Interaction {
      */
     private boolean hasHelperReplied(Ticket ticket) {
         try {
-            var messages = ticket.getTextChannel().getIterableHistory()
+            List<Message> messages = ticket.getTextChannel().getIterableHistory()
                     .takeAsync(100)
                     .get();
 
-            for (var message : messages) {
+            for (Message message : messages) {
                 // Skip bots
                 if (message.getAuthor().isBot()) continue;
                 // Skip the ticket owner

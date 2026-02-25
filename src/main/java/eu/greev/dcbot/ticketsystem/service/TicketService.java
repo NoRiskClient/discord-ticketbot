@@ -1,5 +1,6 @@
 package eu.greev.dcbot.ticketsystem.service;
 
+import lombok.Getter;
 import me.ryzeon.transcripts.DiscordHtmlTranscripts;
 import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.categories.ICategory;
@@ -36,13 +37,10 @@ public class TicketService {
     private final JDA jda;
     private final Config config;
     private final Jdbi jdbi;
+    @Getter
     private final TicketData ticketData;
     private final Set<Ticket> allCurrentTickets = new HashSet<>();
     public static final String WAITING_EMOTE = "\uD83D\uDD50";
-
-    public TicketData getTicketData() {
-        return ticketData;
-    }
 
     public TicketService(JDA jda, Config config, Jdbi jdbi, TicketData ticketData) {
         this.jda = jda;
@@ -219,36 +217,22 @@ public class TicketService {
 
         transcript.addLogMessage("[%s] closed the ticket%s".formatted(closer.getUser().getName(), message == null ? "." : " with following message: " + message), Instant.now().getEpochSecond(), ticketId);
 
-        // Use existing transcript URL if provided, otherwise generate new one
-        String transcriptUrl = existingTranscriptUrl;
-        if (transcriptUrl == null) {
-            try {
-                if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
-                    // Fetch messages first to avoid NPE in library when handling message references
-                    var messages = ticket.getTextChannel().getIterableHistory()
-                            .takeAsync(1000)
-                            .get();
+        boolean isSensitive = ticket.getCategory() != null && ticket.getCategory().isSensitive();
 
-                    if (messages != null && !messages.isEmpty()) {
-                        FileUpload htmlTranscriptUpload = DiscordHtmlTranscripts.getInstance()
-                                .createTranscript(ticket.getTextChannel(), "transcript-" + ticketId + ".html");
-
-                        var logChannel = jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel());
-                        if (logChannel != null) {
-                            var uploadMessage = logChannel.sendFiles(htmlTranscriptUpload).complete();
-                            if (!uploadMessage.getAttachments().isEmpty()) {
-                                transcriptUrl = uploadMessage.getAttachments().getFirst().getUrl();
-                            }
-                        }
-                    } else {
-                        log.warn("No messages found in ticket #{} channel, skipping transcript generation", ticketId);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Failed to generate/upload HTML transcript for ticket #{}: {}", ticketId, e.getMessage());
-                // Continue without transcript - don't let this block ticket closure
-            }
+        // For sensitive categories, transcripts are never generated and never linked.
+        String transcriptUrl;
+        if(isSensitive) {
+            transcriptUrl = null;
+        } else {
+            transcriptUrl = (existingTranscriptUrl == null) ? sendTranscript(ticket) : existingTranscriptUrl;
         }
+
+        log.debug("Closing ticket #{} (category={}, sensitive={}) existingTranscriptUrlPresent={} transcriptUrlPresent={} ",
+                ticketId,
+                ticket.getCategory() == null ? "null" : ticket.getCategory().getId(),
+                isSensitive,
+                existingTranscriptUrl != null,
+                transcriptUrl != null);
 
         EmbedBuilder builder = new EmbedBuilder().setTitle("Ticket " + ticketId)
                 .addField("Closed by", closer.getAsMention(), false);
@@ -257,27 +241,36 @@ public class TicketService {
             builder.addField("Message", message, true);
         }
 
-        if (transcriptUrl != null) {
+        if (!isSensitive && transcriptUrl != null) {
             builder.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
         }
 
         builder.setColor(Color.decode(config.getColor()))
                 .setFooter(config.getServerName(), config.getServerLogo());
 
-        if (ticket.getOwner().getMutualGuilds().contains(jda.getGuildById(config.getServerId()))) {
+        // DM the owner (best-effort)
+        Guild guild = jda.getGuildById(config.getServerId());
+        if (guild != null && ticket.getOwner().getMutualGuilds().contains(guild)) {
             try {
                 ticket.getOwner().openPrivateChannel()
                         .flatMap(channel -> channel.sendMessageEmbeds(builder.build()))
                         .complete();
             } catch (ErrorResponseException e) {
-                log.warn("Couldn't send [{}] their transcript since an error occurred:\nMeaning:{} | Message:{} | Response:{}", ticket.getOwner().getName(), e.getMeaning(), e.getMessage(), e.getErrorResponse());
+                log.warn("Couldn't DM [{}] the ticket close embed: Meaning:{} | Message:{} | Response:{}", ticket.getOwner().getName(), e.getMeaning(), e.getMessage(), e.getErrorResponse());
             }
         }
 
-        if (config.getLogChannel() != 0 && transcriptUrl != null) {
-            jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel())
-                    .sendMessageEmbeds(builder.build())
-                    .queue();
+        // Always send the close embed to the configured log channel (if configured)
+        if (config.getLogChannel() != 0) {
+            TextChannel logChannel = guild == null ? null : guild.getTextChannelById(config.getLogChannel());
+            if (logChannel != null) {
+                logChannel.sendMessageEmbeds(builder.build()).queue(
+                        success -> log.debug("Sent close embed for ticket #{} to log channel {} (sensitive={})", ticketId, config.getLogChannel(), isSensitive),
+                        error -> log.error("Failed to send close embed for ticket #{} to log channel {}: {}", ticketId, config.getLogChannel(), error.getMessage())
+                );
+            } else {
+                log.warn("Log channel {} not found; cannot send close embed for ticket #{}", config.getLogChannel(), ticketId);
+            }
         }
 
         saveTranscriptChanges(ticket.getTranscript().getRecentChanges());
@@ -810,5 +803,83 @@ public class TicketService {
 
             category.delete().queue();
         }
+    }
+
+    public String sendTranscript(Ticket ticket) {
+        // Sensitive categories must not generate/upload transcripts.
+        if (ticket.getCategory() != null && ticket.getCategory().isSensitive()) return null;
+        String transcriptUrl = null;
+        int ticketId = ticket.getId();
+        try {
+            if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
+                // Fetch messages first to avoid NPE in library when handling message references
+                List<net.dv8tion.jda.api.entities.Message> messages = ticket.getTextChannel().getIterableHistory()
+                        .takeAsync(1000)
+                        .get();
+
+                if (messages != null && !messages.isEmpty()) {
+                    FileUpload htmlTranscriptUpload = DiscordHtmlTranscripts.getInstance()
+                            .createTranscript(ticket.getTextChannel(), "transcript-" + ticketId + ".html");
+
+                    TextChannel logChannel = jda.getGuildById(config.getServerId()).getTextChannelById(config.getLogChannel());
+                    if (logChannel != null) {
+                        net.dv8tion.jda.api.entities.Message uploadMessage = logChannel.sendFiles(htmlTranscriptUpload).complete();
+                        transcriptUrl = uploadMessage.getJumpUrl();
+                    }
+                } else {
+                    log.warn("No messages found in ticket #{} channel, skipping transcript generation", ticketId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to generate/upload HTML transcript for ticket #{}: {}", ticketId, e.getMessage());
+            // Continue without transcript - don't let this block ticket closure
+        }
+        return transcriptUrl;
+    }
+
+    public void appendTranscriptLinkAndSendCloseEmbed(String transcriptUrl, Ticket ticket, EmbedBuilder notification) {
+        boolean isSensitive = ticket.getCategory() != null && ticket.getCategory().isSensitive();
+
+        // Only add transcript link for non-sensitive categories
+        if (transcriptUrl != null && !isSensitive) {
+            notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
+        }
+
+        List<Long> channels = config.getRatingNotificationChannels();
+        if (channels == null || channels.isEmpty()) {
+            return;
+        }
+
+        for (Long channelId : channels) {
+            TextChannel channel = jda.getTextChannelById(channelId);
+            if (channel != null) {
+                channel.sendMessageEmbeds(notification.build()).queue(
+                        success -> log.info("Close embed send successfully to {}", channelId),
+                        error -> log.error("Failed to send close embed {}: {}", channelId, error.getMessage())
+                );
+            } else {
+                log.warn("Rating notification channel not found: {}", channelId);
+            }
+        }
+    }
+
+    public boolean isUserPrivilegedSupporter(Member member) {
+        Guild guild = jda.getGuildById(config.getServerId());
+        if (guild == null) {
+            return false;
+        }
+
+        // Check if the member has any of the privileged roles
+        List<Long> privilegedRoles = config.getPrivilegedSupporterRoles();
+        if (privilegedRoles != null) {
+            for (Long roleId : privilegedRoles) {
+                Role role = guild.getRoleById(roleId);
+                if (role != null && member.getRoles().contains(role)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
