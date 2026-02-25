@@ -166,7 +166,7 @@ public class Main {
         );
 
         new HourlyScheduler(config, ticketService, ticketData, jda, xpService).start();
-        new DailyScheduler(ticketService).start();
+        new DailyScheduler(config, jda, ticketData, ticketService).start();
         ratingStatsScheduler = new RatingStatsScheduler(config, ratingData, ticketData, jda, supporterSettingsData);
         ratingStatsScheduler.start();
 
@@ -246,6 +246,14 @@ public class Main {
             // Column already exists, ignore
         }
 
+        // Migration: Add lastSupporterMessage column if it doesn't exist
+        try {
+            jdbi.withHandle(h -> h.createUpdate("ALTER TABLE tickets ADD COLUMN lastSupporterMessageAt BIGINT DEFAULT NULL").execute());
+            log.info("Added lastSupporterMessageAt column to tickets table");
+        } catch (Exception e) {
+            // Column already exists, ignore
+        }
+
         // Migration: Add pending rating columns if they don't exist
         try {
             jdbi.withHandle(h -> h.createUpdate("ALTER TABLE tickets ADD COLUMN pendingRatingSince VARCHAR DEFAULT NULL").execute());
@@ -264,6 +272,14 @@ public class Main {
             log.info("Added pendingCloser column to tickets table");
         } catch (Exception e) {
             // Column already exists, ignore
+        }
+
+        // Migration: Remove supporterRemindersSent column if it exists (replaced by lastSupporterMessageAt)
+        try {
+            jdbi.withHandle(h -> h.createUpdate("ALTER TABLE tickets DROP COLUMN supporterRemindersSent").execute());
+            log.info("Dropped supporterRemindersSent column from tickets table");
+        } catch (Exception e) {
+            // Column doesn't exist, ignore
         }
     }
 

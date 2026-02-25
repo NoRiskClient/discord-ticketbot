@@ -12,7 +12,9 @@ import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.statement.Update;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,9 @@ public class TicketData {
 
                     String category = resultSet.getString("category");
 
+                    Long lastSupporterMessageAt = resultSet.getLong("lastSupporterMessageAt");
+                    boolean lastSupporterMessageAtWasNull = resultSet.wasNull();
+
                     ObjectMapper mapper = new ObjectMapper();
 
                     Ticket.TicketBuilder ticketBuilder;
@@ -53,10 +58,10 @@ public class TicketData {
                                 .isOpen(resultSet.getBoolean("isOpen"))
                                 .isWaiting(resultSet.getBoolean("isWaiting"))
                                 .remindersSent(resultSet.getInt("remindersSent"))
-                                .supporterRemindersSent(resultSet.getInt("supporterRemindersSent"))
                                 .closeMessage(resultSet.getString("closeMessage"))
                                 .waitingSince(resultSet.getString("waitingSince") != null ? Instant.parse(resultSet.getString("waitingSince")) : null)
                                 .baseMessage(resultSet.getString("baseMessage"))
+                                .lastSupporterMessageAt(lastSupporterMessageAtWasNull ? null : lastSupporterMessageAt)
                                 .involved(new ArrayList<>(List.of(resultSet.getString("involved").split(", "))));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
@@ -143,7 +148,7 @@ public class TicketData {
             return jdbi.withHandle(handle -> {
                 // If no ticketID (0), INSERT and return generated key; otherwise UPDATE and return existing id
                 if (ticket.getId() == 0) {
-                    Update update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, supporterRemindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    Update update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                     update
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
@@ -157,16 +162,16 @@ public class TicketData {
                             .bind(9, ticket.isOpen())
                             .bind(10, ticket.getWaitingSince() == null ? null : ticket.getWaitingSince().toString())
                             .bind(11, ticket.getRemindersSent())
-                            .bind(12, ticket.getSupporterRemindersSent())
-                            .bind(13, ticket.getCloseMessage())
-                            .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
-                            .bind(15, ticket.getClosedAt())
-                            .bind(16, ticket.getPendingRatingSince() == null ? null : ticket.getPendingRatingSince().toString())
-                            .bind(17, ticket.getRatingRemindersSent())
-                            .bind(18, ticket.getPendingCloser() != null ? ticket.getPendingCloser().getId() : "");
+                            .bind(12, ticket.getCloseMessage())
+                            .bind(13, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
+                            .bind(14, ticket.getClosedAt())
+                            .bind(15, ticket.getPendingRatingSince() == null ? null : ticket.getPendingRatingSince().toString())
+                            .bind(16, ticket.getRatingRemindersSent())
+                            .bind(17, ticket.getPendingCloser() != null ? ticket.getPendingCloser().getId() : "")
+                            .bind(18, ticket.getLastSupporterMessageAt());
                     return update.executeAndReturnGeneratedKeys("ticketID").mapTo(Integer.class).one();
                 } else {
-                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, supporterRemindersSent=?, closeMessage=?, closer=?, closedAt=?, pendingRatingSince=?, ratingRemindersSent=?, pendingCloser=? WHERE ticketID =?")
+                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, closeMessage=?, closer=?, closedAt=?, pendingRatingSince=?, ratingRemindersSent=?, pendingCloser=?, lastSupporterMessageAt=? WHERE ticketID =?")
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
                             .bind(2, ticket.getCategory().getId())
@@ -179,13 +184,13 @@ public class TicketData {
                             .bind(9, ticket.isOpen())
                             .bind(10, ticket.getWaitingSince() == null ? null : ticket.getWaitingSince().toString())
                             .bind(11, ticket.getRemindersSent())
-                            .bind(12, ticket.getSupporterRemindersSent())
-                            .bind(13, ticket.getCloseMessage())
-                            .bind(14, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
-                            .bind(15, ticket.getClosedAt())
-                            .bind(16, ticket.getPendingRatingSince() == null ? null : ticket.getPendingRatingSince().toString())
-                            .bind(17, ticket.getRatingRemindersSent())
-                            .bind(18, ticket.getPendingCloser() != null ? ticket.getPendingCloser().getId() : "")
+                            .bind(12, ticket.getCloseMessage())
+                            .bind(13, ticket.getCloser() != null ? ticket.getCloser().getId() : "")
+                            .bind(14, ticket.getClosedAt())
+                            .bind(15, ticket.getPendingRatingSince() == null ? null : ticket.getPendingRatingSince().toString())
+                            .bind(16, ticket.getRatingRemindersSent())
+                            .bind(17, ticket.getPendingCloser() != null ? ticket.getPendingCloser().getId() : "")
+                            .bind(18, ticket.getLastSupporterMessageAt())
                             .bind(19, ticket.getId())
                             .execute();
                     return ticket.getId();
@@ -221,7 +226,7 @@ public class TicketData {
     public Map<String, Integer> topClosers(int limit) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT closer, COUNT(*) as c FROM tickets WHERE isOpen = false AND closer != '' GROUP BY closer ORDER BY c DESC LIMIT :limit")
                 .bind("limit", limit)
-                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("closer", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));
@@ -230,7 +235,7 @@ public class TicketData {
     public Map<String, Integer> topSupporters(int limit) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = true AND supporter != '' GROUP BY supporter ORDER BY c DESC LIMIT :limit")
                 .bind("limit", limit)
-                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));
@@ -239,15 +244,32 @@ public class TicketData {
     public Map<String, String> nextTicketsForClosing(int limit) {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT channelID, waitingSince FROM tickets WHERE isOpen = true AND waitingSince != '' ORDER BY waitingSince ASC LIMIT :limit")
                 .bind("limit", limit)
-                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("channelID", String.class), row.getColumn("waitingSince", String.class));
+                    return map;
+                }));
+    }
+
+    public Map<String, Map<String, String>> longestSinceLastSupporterMessage(int limit) {
+        long now = Instant.now().getEpochSecond();
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, channelID, lastSupporterMessageAt FROM tickets WHERE isOpen = true AND supporter != '' AND :now - 43200 > lastSupporterMessageAt AND isWaiting = false AND pendingRatingSince IS NULL ORDER BY lastSupporterMessageAt ASC LIMIT :limit")
+                .bind("limit", limit)
+                .bind("now", now)
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
+                    long lastMessageAt = row.getColumn("lastSupporterMessageAt", Long.class);
+                    String supporter = row.getColumn("supporter", String.class);
+                    String channelID = row.getColumn("channelID", String.class);
+
+                    map.computeIfAbsent(supporter, k -> new LinkedHashMap<>())
+                            .put(channelID, String.valueOf(lastMessageAt));
+
                     return map;
                 }));
     }
 
     // Time-based ticket stats
     public int countClosedTicketsLastDays(int days) {
-        long since = Instant.now().minus(days, java.time.temporal.ChronoUnit.DAYS).getEpochSecond();
+        long since = Instant.now().minus(days, ChronoUnit.DAYS).getEpochSecond();
         return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isOpen = false AND closedAt >= ?")
                 .bind(0, since)
                 .mapTo(Integer.class)
@@ -256,11 +278,11 @@ public class TicketData {
     }
 
     public Map<String, Integer> countClosedTicketsPerSupporterLastDays(int days) {
-        long since = Instant.now().minus(days, java.time.temporal.ChronoUnit.DAYS).getEpochSecond();
+        long since = Instant.now().minus(days, ChronoUnit.DAYS).getEpochSecond();
         return jdbi.withHandle(handle -> handle.createQuery(
                         "SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = false AND supporter != '' AND closedAt >= ? GROUP BY supporter ORDER BY c DESC")
                 .bind(0, since)
-                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));
@@ -276,7 +298,7 @@ public class TicketData {
     public Map<String, Integer> countClosedTicketsPerSupporterAllTime() {
         return jdbi.withHandle(handle -> handle.createQuery(
                         "SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = false AND supporter != '' GROUP BY supporter ORDER BY c DESC")
-                .reduceRows(new java.util.LinkedHashMap<>(), (map, row) -> {
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));

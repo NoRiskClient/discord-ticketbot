@@ -247,7 +247,9 @@ public class TicketListener extends ListenerAdapter {
             }
         }
 
-        ticket.setSupporterRemindersSent(0);
+        if (event.getMember() != null && event.getMember().getRoles().stream().map(Role::getIdLong).toList().contains(config.getStaffId())) {
+            ticket.setLastSupporterMessageAt(Instant.now().getEpochSecond());
+        }
 
         ticket.getTranscript().addMessage(event.getMessage(), ticket.getId());
     }

@@ -365,6 +365,8 @@ public class TicketService {
                 Role role = ticket.getTextChannel().getGuild().getRoleById(id);
                 if (role != null) {
                     ticket.getTextChannel().upsertPermissionOverride(role).setAllowed(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY).queue();
+                } else {
+                    log.warn("Couldn't find role {} for category {}", id, ticket.getCategory().getId());
                 }
             }
         } else {
@@ -662,10 +664,12 @@ public class TicketService {
 
     public void consolidateCategoriesAndCleanup() {
         for (ICategory category : Main.CATEGORIES) {
-            Category mainCategory = jda.getCategoryById(config.getCategories().get(category.getId()));
-            if (mainCategory == null) {
+
+            if (config.getCategories().get(category.getId()) == null || jda.getCategoryById(config.getCategories().get(category.getId())) == null) {
                 continue;
             }
+
+            Category mainCategory = jda.getCategoryById(config.getCategories().get(category.getId()));
 
             List<Category> overflowCategories = new ArrayList<>(Main.OVERFLOW_CHANNEL_CATEGORIES.get(category));
             overflowCategories.addFirst(mainCategory);
