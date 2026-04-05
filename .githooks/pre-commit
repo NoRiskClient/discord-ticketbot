@@ -2,6 +2,12 @@
 
 ./gradlew spotlessApply
 
+git diff --cached --name-only | while IFS= read -r file; do
+  if [ -f "$file" ]; then
+    git add "$file"
+  fi
+done
+
 echo "✅ Applied code formatting."
 
 ./gradlew checkAnnotations
