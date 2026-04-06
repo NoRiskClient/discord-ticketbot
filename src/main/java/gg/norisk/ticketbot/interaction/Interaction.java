@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -39,9 +40,10 @@ public abstract class Interaction {
   protected final @NotNull TicketService ticketService;
   protected final @NotNull JDA jda;
 
-  protected boolean permissionsRequired = true;
-  protected boolean ticketChannelRequired = true;
   protected boolean administratorRequired = false;
+  protected boolean allowedAnywhere = false;
+  protected boolean allowedInTicketThread = true;
+  protected boolean allowedInPrivateTicketChannel = false;
 
   @Getter protected @Nullable Ticket ticket;
   @Getter protected IReplyCallback reply;
@@ -90,51 +92,50 @@ public abstract class Interaction {
 
   public void handleSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {}
 
-  private boolean missingPermissions(@NotNull IReplyCallback reply) {
-    return missingPermissions(reply, reply.getMember());
-  }
+  public boolean conditionsFulfilled(IReplyCallback event) {
+    Member member = event.getMember();
 
-  protected boolean missingPermissions(@Nullable IReplyCallback reply, @Nullable Member member) {
-    if (member == null) {
-      log.error("Interaction {} has been ran without member", this.getIdentifier());
-      return true;
-    }
-
-    if (!member.getRoles().contains(jda.getRoleById(config.getStaffId()))
-        || (administratorRequired && !member.getPermissions().contains(Permission.ADMINISTRATOR))) {
-      if (reply != null)
-        replyEphemeralAndQueue(
-            new EmbedBuildInfo(
-                Embeds.INTERACTION_MISSING_PERMISSIONS, reply.getUserLocale().toLocale(), null));
-      return true;
-    }
-
-    return false;
-  }
-
-  private boolean isIncorrectChannel(IReplyCallback reply) {
-    if (!Optional.ofNullable(reply.getChannel())
-        .map(ticketService::isTicketChannel)
-        .orElse(false)) {
+    if ((member == null || !member.getPermissions().contains(Permission.ADMINISTRATOR))
+        && administratorRequired) {
       replyEphemeralAndQueue(
           new EmbedBuildInfo(
-              Embeds.INTERACTION_WRONG_CHANNEL, reply.getUserLocale().toLocale(), null));
+              Embeds.INTERACTION_MISSING_PERMISSIONS, reply.getUserLocale().toLocale(), null));
+
+      return false;
+    }
+
+    if (allowedAnywhere) {
       return true;
     }
 
-    return false;
-  }
+    if (allowedInPrivateTicketChannel
+        && ticketService.isTicketChannel(event.getChannel())
+        && event.getChannel().getType() == ChannelType.PRIVATE) {
+      return true;
+    }
 
-  public boolean conditionsNotFulfilled(IReplyCallback event) {
-    return (permissionsRequired && missingPermissions(event))
-        || (ticketChannelRequired && isIncorrectChannel(event));
+    if (allowedInTicketThread
+        && ticketService.isTicketChannel(event.getChannel())
+        && event.getChannel().getType() == ChannelType.GUILD_PUBLIC_THREAD) {
+      return true;
+    }
+
+    replyEphemeralAndQueue(
+        new EmbedBuildInfo(
+            Embeds.INTERACTION_WRONG_CHANNEL, event.getUserLocale().toLocale(), null));
+
+    return false;
   }
 
   public void handle(IReplyCallback event) {
     this.reply = event;
-    if (conditionsNotFulfilled(event)) return;
-    if (this.ticketChannelRequired)
-      this.ticket = this.ticketService.getTicketByChannel(event.getChannel());
+
+    if (!conditionsFulfilled(event)) {
+      return;
+    }
+
+    this.ticket = this.ticketService.getTicketByChannel(event.getChannel());
+
     switch (event) {
       case ButtonInteractionEvent e -> handleButtonInteraction(e);
       case ModalInteractionEvent e -> handleModalInteraction(e);

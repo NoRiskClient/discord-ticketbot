@@ -25,8 +25,7 @@ public class TicketCreationModalInteraction extends Interaction {
       @NotNull TicketCategory category) {
     super(config, ticketService, jda);
     this.category = category;
-    this.permissionsRequired = false;
-    this.ticketChannelRequired = false;
+    this.allowedAnywhere = true;
   }
 
   @Override

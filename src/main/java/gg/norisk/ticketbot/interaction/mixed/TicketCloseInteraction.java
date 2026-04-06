@@ -20,7 +20,7 @@ public class TicketCloseInteraction extends Interaction {
   public TicketCloseInteraction(
       @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
     super(config, ticketService, jda);
-    this.permissionsRequired = false;
+    this.allowedInPrivateTicketChannel = true;
     addCommand("Close the ticket");
   }
 

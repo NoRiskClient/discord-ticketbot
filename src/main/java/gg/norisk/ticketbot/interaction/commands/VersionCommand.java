@@ -16,8 +16,7 @@ public class VersionCommand extends Interaction {
   public VersionCommand(
       @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
     super(config, ticketService, jda);
-    this.ticketChannelRequired = false;
-    this.permissionsRequired = false;
+    this.allowedAnywhere = true;
     addCommand("Displays the current version of the bot");
   }
 

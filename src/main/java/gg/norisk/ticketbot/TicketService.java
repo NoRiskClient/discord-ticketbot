@@ -129,7 +129,12 @@ public class TicketService {
     return Result.success(null);
   }
 
-  public boolean isTicketChannel(Channel channel) {
+  @Contract("null -> false")
+  public boolean isTicketChannel(@Nullable Channel channel) {
+    if (channel == null) {
+      return false;
+    }
+
     return database.getTicketByChannelId(channel.getId()) != null;
   }
 

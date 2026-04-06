@@ -13,8 +13,7 @@ public class CategorySelectionInteraction extends ArgumentedInteraction {
   public CategorySelectionInteraction(
       @NotNull Config config, @NotNull TicketService ticketService, @NotNull JDA jda) {
     super(config, ticketService, jda);
-    this.permissionsRequired = false;
-    this.ticketChannelRequired = false;
+    this.allowedAnywhere = true;
   }
 
   @Override
