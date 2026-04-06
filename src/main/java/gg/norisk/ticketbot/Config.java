@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -29,7 +28,6 @@ public class Config {
   private String staffId = "";
   private String guildId = "";
   private String color = "#008cff";
-  private String baseChannelId = "";
   private String unclaimedCategoryId = "";
 
   public static Config load(@NotNull Path path) throws IOException {
@@ -70,7 +68,6 @@ public class Config {
     requiredFields.put("token", this.token);
     requiredFields.put("staffId", this.staffId);
     requiredFields.put("guildId", this.guildId);
-    requiredFields.put("baseChannelId", this.baseChannelId);
     requiredFields.put("unclaimedCategoryId", this.unclaimedCategoryId);
 
     for (Map.Entry<String, String> entry : requiredFields.entrySet()) {
@@ -97,12 +94,6 @@ public class Config {
       System.exit(1);
     }
 
-    if (jda.getTextChannelById(this.baseChannelId) == null) {
-      log.error(
-          "The base channel ID provided in the configuration is invalid! Please check your configuration.");
-      System.exit(1);
-    }
-
     if (jda.getCategoryById(this.unclaimedCategoryId) == null) {
       log.error(
           "The unclaimed category ID provided in the configuration is invalid! Please check your configuration.");
@@ -112,10 +103,6 @@ public class Config {
 
   public Guild getGuild(JDA jda) {
     return Objects.requireNonNull(jda.getGuildById(this.guildId));
-  }
-
-  public TextChannel getBaseChannel(JDA jda) {
-    return Objects.requireNonNull(jda.getTextChannelById(this.baseChannelId));
   }
 
   public Category getUnclaimedCategory(JDA jda) {

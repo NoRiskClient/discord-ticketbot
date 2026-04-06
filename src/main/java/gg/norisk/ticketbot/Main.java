@@ -1,6 +1,5 @@
 package gg.norisk.ticketbot;
 
-import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.interaction.ArgumentedInteraction;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
@@ -10,7 +9,6 @@ import gg.norisk.ticketbot.interaction.mixed.TicketClaimInteraction;
 import gg.norisk.ticketbot.interaction.mixed.TicketCloseInteraction;
 import gg.norisk.ticketbot.interaction.modals.TicketCreationModalInteraction;
 import gg.norisk.ticketbot.interaction.selections.CategorySelectionInteraction;
-import gg.norisk.ticketbot.util.TranslationUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -19,26 +17,21 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
-import org.jetbrains.annotations.Nullable;
 
 @Slf4j
 public class Main {
   public static final String VERSION = "2.0.0-beta";
   private static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
-  public static @Nullable String BASE_MESSAGE_ID;
 
   public static void main(String[] args) throws IOException, InterruptedException {
     log.info("Starting discord-ticketbot v{}...", VERSION);
@@ -103,10 +96,6 @@ public class Main {
       System.exit(1);
       return;
     }
-
-    log.debug("Updating base message...");
-
-    updateBaseMessage(config, database, jda);
 
     TicketService ticketService = new TicketService(config, database, jda);
 
@@ -178,48 +167,5 @@ public class Main {
     } else {
       log.warn("No interaction found for id: {}", id);
     }
-  }
-
-  private static void updateBaseMessage(Config config, Database database, JDA jda) {
-    TextChannel channel = Objects.requireNonNull(jda.getTextChannelById(config.getBaseChannelId()));
-    String id = database.getMiscValue("base_message_id");
-
-    if (id != null && !id.isBlank()) {
-      channel
-          .deleteMessageById(id)
-          .queue(success -> log.debug("Deleted old base message with id {}", id), error -> {});
-    }
-
-    StringSelectMenu.Builder selectionBuilder =
-        StringSelectMenu.create("select-category")
-            .setPlaceholder(
-                TranslationUtils.translate(
-                    "selection.category.placeholder", channel.getGuild().getLocale().toLocale()));
-
-    for (TicketCategory category : TicketCategory.values()) {
-      selectionBuilder.addOption(
-          TranslationUtils.translate(
-              "category." + category.getId() + ".label", channel.getGuild().getLocale().toLocale()),
-          category.getId(),
-          TranslationUtils.translate(
-              "category." + category.getId() + ".description",
-              channel.getGuild().getLocale().toLocale()));
-    }
-
-    Message message =
-        channel
-            .sendMessageEmbeds(
-                Embeds.BASE_MESSAGE.toBuilder(
-                        config,
-                        channel.getGuild().getLocale().toLocale(),
-                        Map.of(),
-                        channel.getGuild(),
-                        null)
-                    .build())
-            .setActionRow(selectionBuilder.build())
-            .complete();
-
-    database.setMiscValue("base_message_id", message.getId());
-    BASE_MESSAGE_ID = message.getId();
   }
 }
