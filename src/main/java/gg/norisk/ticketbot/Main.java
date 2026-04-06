@@ -4,6 +4,7 @@ import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.interaction.ArgumentedInteraction;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
+import gg.norisk.ticketbot.interaction.commands.TicketCreateCommand;
 import gg.norisk.ticketbot.interaction.commands.VersionCommand;
 import gg.norisk.ticketbot.interaction.mixed.TicketClaimInteraction;
 import gg.norisk.ticketbot.interaction.mixed.TicketCloseInteraction;
@@ -118,6 +119,7 @@ public class Main {
         jda,
         CategorySelectionInteraction::new,
         VersionCommand::new,
+        TicketCreateCommand::new,
         TicketClaimInteraction::new,
         TicketCloseInteraction::new);
 

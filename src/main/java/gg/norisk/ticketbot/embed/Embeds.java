@@ -14,6 +14,12 @@ public class Embeds {
           "message.interaction.wrong_channel.title",
           "message.interaction.wrong_channel.description");
 
+  public static final EmbedDefinition TICKET_CREATION_START_FAILED =
+      failure("message.ticket.creation_start.failed.title", "$ERROR");
+
+  public static final EmbedDefinition TICKET_CREATION_START_SUCCESS =
+      success("ticket.creation_start");
+
   public static final EmbedDefinition TICKET_CREATION_FAILED = failure("ticket.creation");
 
   public static final EmbedDefinition TICKET_CREATION_SUCCESS = success("ticket.creation");
