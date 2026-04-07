@@ -14,7 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jetbrains.annotations.Nullable;
@@ -31,7 +31,7 @@ public class Ticket {
   private Instant createdAt;
   private @Nullable Instant claimedAt;
   private @Nullable Instant closedAt;
-  private @Nullable TextChannel channel;
+  private @Nullable ThreadChannel channel;
   private @Nullable User supporter;
   private @Nullable User closer;
 
@@ -56,10 +56,10 @@ public class Ticket {
           r.getLong("claimedAt") == 0 ? null : Instant.ofEpochMilli(r.getLong("claimedAt"));
       Instant closedAt =
           r.getLong("closedAt") == 0 ? null : Instant.ofEpochMilli(r.getLong("closedAt"));
-      TextChannel channel =
+      ThreadChannel channel =
           r.getString("channelId").isEmpty()
               ? null
-              : jda.getTextChannelById(r.getString("channelId"));
+              : jda.getThreadChannelById(r.getString("channelId"));
       User supporter =
           r.getString("supporterId").isEmpty() ? null : jda.getUserById(r.getString("supporter"));
       User closer =

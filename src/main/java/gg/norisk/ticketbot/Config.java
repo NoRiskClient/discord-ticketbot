@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.channel.concrete.Category;
+import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -28,7 +29,9 @@ public class Config {
   private String staffId = "";
   private String guildId = "";
   private String color = "#008cff";
-  private String unclaimedCategoryId = "";
+  private String unclaimedForumId = "";
+  private Map<String, String> forumIds = Map.of();
+  private String staffLocale = "en";
 
   public static Config load(@NotNull Path path) throws IOException {
     Files.createDirectories(path.getParent());
@@ -68,7 +71,7 @@ public class Config {
     requiredFields.put("token", this.token);
     requiredFields.put("staffId", this.staffId);
     requiredFields.put("guildId", this.guildId);
-    requiredFields.put("unclaimedCategoryId", this.unclaimedCategoryId);
+    requiredFields.put("unclaimedForumId", this.unclaimedForumId);
 
     for (Map.Entry<String, String> entry : requiredFields.entrySet()) {
       if (entry.getValue() == null || entry.getValue().isBlank()) {
@@ -77,6 +80,14 @@ public class Config {
             entry.getKey(),
             entry.getKey());
         System.exit(1);
+      }
+    }
+
+    for (TicketCategory category : TicketCategory.values()) {
+      if (forumIds.get(category.getId()) == null || forumIds.get(category.getId()).isBlank()) {
+        log.warn(
+            "No forum ID provided for category {}! The tickets for this category will stay in the unclaimed forum.",
+            category.getId());
       }
     }
   }
@@ -94,10 +105,19 @@ public class Config {
       System.exit(1);
     }
 
-    if (jda.getCategoryById(this.unclaimedCategoryId) == null) {
+    if (jda.getForumChannelById(this.unclaimedForumId) == null) {
       log.error(
-          "The unclaimed category ID provided in the configuration is invalid! Please check your configuration.");
+          "The unclaimed forum ID provided in the configuration is invalid! Please check your configuration.");
       System.exit(1);
+    }
+
+    for (Map.Entry<String, String> entry : forumIds.entrySet()) {
+      if (jda.getForumChannelById(entry.getValue()) == null) {
+        log.error(
+            "The forum ID provided for category {} is invalid! Please check your configuration.",
+            entry.getKey());
+        System.exit(1);
+      }
     }
   }
 
@@ -105,7 +125,15 @@ public class Config {
     return Objects.requireNonNull(jda.getGuildById(this.guildId));
   }
 
-  public Category getUnclaimedCategory(JDA jda) {
-    return Objects.requireNonNull(jda.getCategoryById(this.unclaimedCategoryId));
+  public ForumChannel getUnclaimedForum(JDA jda) {
+    return Objects.requireNonNull(jda.getForumChannelById(this.unclaimedForumId));
+  }
+
+  public ForumChannel getForum(JDA jda, TicketCategory category) {
+    return Objects.requireNonNull(jda.getForumChannelById(forumIds.get(category.getId())));
+  }
+
+  public Locale getStaffLocale() {
+    return Locale.of(staffLocale);
   }
 }

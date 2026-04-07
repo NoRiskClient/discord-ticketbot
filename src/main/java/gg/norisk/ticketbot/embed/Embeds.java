@@ -22,7 +22,17 @@ public class Embeds {
 
   public static final EmbedDefinition TICKET_CREATION_FAILED = failure("ticket.creation");
 
-  public static final EmbedDefinition TICKET_CREATION_SUCCESS = success("ticket.creation");
+  public static final EmbedDefinition TICKET_CREATION_SUCCESS =
+      new EmbedDefinition(
+          "message.ticket.creation.success.title",
+          "message.ticket.creation.success.description",
+          true,
+          true,
+          List.of(
+              new EmbedDefinition.Field("message.ticket.initial.field.id", "`$ID`", true),
+              new EmbedDefinition.Field("message.ticket.initial.field.category", "$CATEGORY", true),
+              new EmbedDefinition.Field("**▬▬▬▬▬**", "$DETAILS")),
+          0x00FF00);
 
   public static final EmbedDefinition BASE_MESSAGE =
       new EmbedDefinition(
@@ -45,11 +55,11 @@ public class Embeds {
   public static final EmbedDefinition INITIAL_MESSAGE =
       new EmbedDefinition(
           null,
-          "message.ticket.initial.description",
+          null,
           true,
           true,
           List.of(
-              new EmbedDefinition.Field("message.ticket.initial.field.id", "$ID", true),
+              new EmbedDefinition.Field("message.ticket.initial.field.id", "`$ID`", true),
               new EmbedDefinition.Field("message.ticket.initial.field.category", "$CATEGORY", true),
               new EmbedDefinition.Field(
                   "message.ticket.initial.field.owner", "$USER_MENTION", true),

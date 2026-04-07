@@ -14,8 +14,8 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,15 +40,6 @@ public class TicketService {
 
     int id = database.saveTicket(ticket);
 
-    TextChannel channel =
-        config
-            .getGuild(jda)
-            .createTextChannel(generateChannelName(ticket), config.getUnclaimedCategory(jda))
-            .complete();
-
-    ticket.setChannel(channel);
-    database.saveTicket(ticket);
-
     StringBuilder details = new StringBuilder();
 
     for (Map.Entry<String, String> entry : info.entrySet()) {
@@ -56,34 +47,45 @@ public class TicketService {
           .append("**")
           .append(
               TranslationUtils.translate(
-                  "category." + category.getId() + "." + entry.getKey() + ".label", locale))
+                  "category." + category.getId() + "." + entry.getKey() + ".label",
+                  config.getStaffLocale()))
           .append("**\n")
           .append(entry.getValue())
           .append("\n");
     }
 
-    channel
-        .sendMessage(owner.getAsMention())
-        .addEmbeds(
-            Embeds.INITIAL_MESSAGE.toBuilder(
-                    config,
-                    locale,
-                    new HashMap<>(
-                        Map.of(
-                            "ID",
-                            String.valueOf(id),
-                            "CATEGORY",
-                            ticket.getCategory().getId(),
-                            "USER_MENTION",
-                            owner.getAsMention(),
-                            "DETAILS",
-                            details.toString())),
-                    config.getGuild(jda),
-                    owner)
-                .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
-                .build())
-        .setActionRow(Button.primary("claim", "Claim"), Button.danger("close", "Close"))
-        .queue();
+    ThreadChannel channel =
+        config
+            .getUnclaimedForum(jda)
+            .createForumPost(
+                generateChannelName(ticket),
+                new MessageCreateBuilder()
+                    .addEmbeds(
+                        Embeds.INITIAL_MESSAGE.toBuilder(
+                                config,
+                                config.getStaffLocale(),
+                                new HashMap<>(
+                                    Map.of(
+                                        "ID",
+                                        String.valueOf(id),
+                                        "CATEGORY",
+                                        TranslationUtils.translate(
+                                            "category." + ticket.getCategory().getId() + ".label",
+                                            config.getStaffLocale()),
+                                        "USER_MENTION",
+                                        owner.getAsMention(),
+                                        "DETAILS",
+                                        details.toString())),
+                                config.getGuild(jda),
+                                owner)
+                            .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
+                            .build())
+                    .build())
+            .complete()
+            .getThreadChannel();
+
+    ticket.setChannel(channel);
+    database.saveTicket(ticket);
 
     return Result.success(ticket);
   }

@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
@@ -23,6 +24,7 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -162,9 +164,24 @@ public abstract class Interaction {
   }
 
   protected void deferEphemeralAndQueue(Supplier<EmbedBuildInfo> infoSupplier) {
+    deferEphemeral(infoSupplier).queue();
+  }
+
+  protected void deferAndQueue(Supplier<EmbedBuildInfo> infoSupplier) {
+    defer(infoSupplier).queue();
+  }
+
+  protected WebhookMessageCreateAction<Message> deferEphemeral(
+      Supplier<EmbedBuildInfo> infoSupplier) {
     reply.deferReply(true).queue();
     EmbedBuildInfo info = infoSupplier.get();
-    reply.getHook().sendMessageEmbeds(build(info)).setEphemeral(true).queue();
+    return reply.getHook().sendMessageEmbeds(build(info)).setEphemeral(true);
+  }
+
+  protected WebhookMessageCreateAction<Message> defer(Supplier<EmbedBuildInfo> infoSupplier) {
+    reply.deferReply().queue();
+    EmbedBuildInfo info = infoSupplier.get();
+    return reply.getHook().sendMessageEmbeds(build(info));
   }
 
   private MessageEmbed build(EmbedBuildInfo info) {

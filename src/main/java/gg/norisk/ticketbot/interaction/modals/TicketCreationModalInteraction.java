@@ -3,11 +3,11 @@ package gg.norisk.ticketbot.interaction.modals;
 import gg.norisk.ticketbot.Config;
 import gg.norisk.ticketbot.TicketCategory;
 import gg.norisk.ticketbot.TicketService;
-import gg.norisk.ticketbot.embed.EmbedBuildInfo;
 import gg.norisk.ticketbot.embed.Embeds;
 import gg.norisk.ticketbot.entities.Ticket;
 import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.util.Result;
+import gg.norisk.ticketbot.util.TranslationUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,30 +35,68 @@ public class TicketCreationModalInteraction extends Interaction {
 
   @Override
   public void handleModalInteraction(@NotNull ModalInteractionEvent event) {
-    deferEphemeralAndQueue(
-        () -> {
-          Result<Ticket> result =
-              ticketService.createTicket(
-                  category.extractInfo(event.getInteraction()),
-                  category,
-                  event.getInteraction().getUser(),
-                  event.getUserLocale().toLocale());
+    event.deferReply().queue();
 
-          if (result.getError() == null
-              && result.getValue() != null
-              && result.getValue().getChannel() != null) {
-            return new EmbedBuildInfo(
-                Embeds.TICKET_CREATION_SUCCESS,
-                event.getInteraction().getUserLocale().toLocale(),
-                new HashMap<>(Map.of("CHANNEL", result.getValue().getChannel().getId())));
-          } else {
-            return new EmbedBuildInfo(
-                Embeds.TICKET_CREATION_FAILED,
-                event.getInteraction().getUserLocale().toLocale(),
-                new HashMap<>(
-                    Map.of(
-                        "ERROR", Optional.ofNullable(result.getError()).orElse("Unknown error"))));
-          }
-        });
+    Result<Ticket> result =
+        ticketService.createTicket(
+            category.extractInfo(event.getInteraction()),
+            category,
+            event.getInteraction().getUser(),
+            event.getUserLocale().toLocale());
+
+    if (!result.isFailure()
+        && result.getValue() != null
+        && result.getValue().getChannel() != null) {
+      StringBuilder details = new StringBuilder();
+
+      for (Map.Entry<String, String> entry : result.getValue().getInfo().entrySet()) {
+        details
+            .append("**")
+            .append(
+                TranslationUtils.translate(
+                    "category." + category.getId() + "." + entry.getKey() + ".label",
+                    event.getUserLocale().toLocale()))
+            .append("**\n")
+            .append(entry.getValue())
+            .append("\n");
+      }
+
+      event
+          .getHook()
+          .sendMessageEmbeds(
+              Embeds.TICKET_CREATION_SUCCESS.toBuilder(
+                      config,
+                      event.getUserLocale().toLocale(),
+                      new HashMap<>(
+                          Map.of(
+                              "ID",
+                              String.valueOf(result.getValue().getId()),
+                              "CATEGORY",
+                              TranslationUtils.translate(
+                                  "category." + result.getValue().getCategory().getId() + ".label",
+                                  event.getUserLocale().toLocale()),
+                              "DETAILS",
+                              details.toString())),
+                      config.getGuild(jda),
+                      event.getUser())
+                  .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
+                  .build())
+          .queue();
+    } else {
+      event
+          .getHook()
+          .sendMessageEmbeds(
+              Embeds.TICKET_CREATION_FAILED.toBuilder(
+                      config,
+                      event.getUserLocale().toLocale(),
+                      new HashMap<>(
+                          Map.of(
+                              "ERROR",
+                              Optional.ofNullable(result.getError()).orElse("Unknown error"))),
+                      config.getGuild(jda),
+                      event.getUser())
+                  .build())
+          .queue();
+    }
   }
 }
