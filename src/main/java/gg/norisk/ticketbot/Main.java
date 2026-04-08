@@ -17,6 +17,8 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Webhook;
+import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -54,6 +56,7 @@ public class Main {
                       GatewayIntent.MESSAGE_CONTENT,
                       GatewayIntent.GUILD_MEMBERS,
                       GatewayIntent.GUILD_MESSAGES,
+                      GatewayIntent.DIRECT_MESSAGES,
                       GatewayIntent.GUILD_PRESENCES))
               .disableCache(
                   CacheFlag.ACTIVITY,
@@ -127,7 +130,27 @@ public class Main {
 
     jda.updateCommands().addCommands(parent).queue();
 
-    jda.addEventListener(new EventListener());
+    jda.addEventListener(new EventListener(ticketService));
+
+    log.debug("Checking webhooks...");
+
+    for (TicketCategory category : TicketCategory.values()) {
+      ForumChannel forum = config.getForum(jda, category);
+      List<Webhook> webhooks = forum.retrieveWebhooks().complete();
+
+      if (webhooks.isEmpty()) {
+        log.debug("Webhook for category {} is missing. Creating...", category.getId());
+        forum.createWebhook("Ticket Webhook").complete();
+      }
+    }
+
+    ForumChannel unclaimedForum = config.getUnclaimedForum(jda);
+    List<Webhook> unclaimedWebhooks = unclaimedForum.retrieveWebhooks().complete();
+
+    if (unclaimedWebhooks.isEmpty()) {
+      log.debug("Webhook for unclaimed tickets is missing. Creating...");
+      unclaimedForum.createWebhook("Ticket Webhook").complete();
+    }
 
     log.info("Ticket bot successfully started!");
   }

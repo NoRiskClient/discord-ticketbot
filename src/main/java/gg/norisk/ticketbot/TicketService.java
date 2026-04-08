@@ -10,12 +10,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.Channel;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -23,6 +25,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@Slf4j
 @AllArgsConstructor
 public class TicketService {
   private final Config config;
@@ -259,13 +262,61 @@ public class TicketService {
     return Result.success(null);
   }
 
+  public void handleMessage(@NotNull GenericMessageEvent event) {
+    if (event.isFromType(ChannelType.PRIVATE) && isOpenTicketChannel(event.getChannel())) {
+      Ticket ticket = getTicketByChannel(event.getChannel());
+
+      Webhook webhook;
+
+      if (Objects.requireNonNull(ticket).getSupporter() != null) {
+        webhook =
+            config.getForum(jda, ticket.getCategory()).retrieveWebhooks().complete().stream()
+                .filter(w -> w.getName().equals("Ticket Webhook"))
+                .findFirst()
+                .orElse(null);
+
+        if (webhook == null) {
+          log.debug(
+              "Webhook for category {} is missing. Creating...", ticket.getCategory().getId());
+          webhook =
+              config.getForum(jda, ticket.getCategory()).createWebhook("Ticket Webhook").complete();
+        }
+      } else {
+        webhook =
+            config.getUnclaimedForum(jda).retrieveWebhooks().complete().stream()
+                .filter(w -> w.getName().equals("Ticket Webhook"))
+                .findFirst()
+                .orElse(null);
+
+        if (webhook == null) {
+          log.debug("Webhook for unclaimed tickets is missing. Creating...");
+          webhook = config.getUnclaimedForum(jda).createWebhook("Ticket Webhook").complete();
+        }
+      }
+
+      Message message = event.getChannel().retrieveMessageById(event.getMessageId()).complete();
+
+      webhook
+          .sendMessage(new MessageCreateBuilder().setContent(message.getContentRaw()).build())
+          .setUsername(message.getAuthor().getEffectiveName())
+          .setAvatarUrl(message.getAuthor().getEffectiveAvatarUrl())
+          .setThread(ticket.getChannel())
+          .queue();
+    }
+  }
+
   @Contract("null -> false")
   public boolean isTicketChannel(@Nullable Channel channel) {
     if (channel == null) {
       return false;
     }
 
-    return database.getTicketByChannelId(channel.getId()) != null;
+    return getTicketByChannel(channel) != null;
+  }
+
+  public boolean isOpenTicketChannel(@Nullable Channel channel) {
+    return isTicketChannel(channel)
+        && Objects.requireNonNull(getTicketByChannel(channel)).getClosedAt() == null;
   }
 
   public Ticket getTicketByChannelId(String channelId) {
@@ -279,7 +330,12 @@ public class TicketService {
       return null;
     }
 
-    return database.getTicketByChannelId(channel.getId());
+    if (channel instanceof PrivateChannel privateChannel) {
+      return database.getOpenTicketByOwnerId(
+          Objects.requireNonNull(privateChannel.getUser()).getId());
+    } else {
+      return database.getTicketByChannelId(channel.getId());
+    }
   }
 
   private String generateChannelName(Ticket ticket) {

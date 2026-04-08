@@ -21,6 +21,7 @@ public class Database {
   private final JDA jda;
   private final Cache<String, Ticket> ticketByChannelCache;
   private final Cache<Integer, Ticket> ticketByIdCache;
+  private final Cache<String, Ticket> ticketByOwnerCache;
 
   public Database(@NotNull String url, @NotNull JDA jda) {
     this.url = url;
@@ -29,6 +30,9 @@ public class Database {
         Caffeine.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).maximumSize(1000).build();
 
     this.ticketByIdCache =
+        Caffeine.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).maximumSize(1000).build();
+
+    this.ticketByOwnerCache =
         Caffeine.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).maximumSize(1000).build();
   }
 
@@ -114,8 +118,36 @@ public class Database {
     if (ticket != null) {
       ticketByChannelCache.put(channelId, ticket);
       ticketByIdCache.put(ticket.getId(), ticket);
+      ticketByOwnerCache.put(ticket.getOwner().getId(), ticket);
     } else {
       ticketByChannelCache.invalidate(channelId);
+    }
+
+    return ticket;
+  }
+
+  @Nullable
+  public Ticket getOpenTicketByOwnerId(String ownerId) {
+    Ticket cached = ticketByOwnerCache.getIfPresent(ownerId);
+    if (cached != null) {
+      return cached;
+    }
+
+    Ticket ticket =
+        jdbi.withHandle(
+            handle ->
+                handle
+                    .createQuery("SELECT * FROM tickets WHERE ownerId = :ownerId AND closedAt = 0")
+                    .bind("ownerId", ownerId)
+                    .map(new Ticket.Mapper(jda))
+                    .findOne()
+                    .orElse(null));
+
+    if (ticket != null) {
+      ticketByChannelCache.put(
+          ticket.getChannel() != null ? ticket.getChannel().getId() : "", ticket);
+      ticketByIdCache.put(ticket.getId(), ticket);
+      ticketByOwnerCache.put(ownerId, ticket);
     }
 
     return ticket;
@@ -142,6 +174,7 @@ public class Database {
       ticketByIdCache.put(id, ticket);
       ticketByChannelCache.put(
           ticket.getChannel() != null ? ticket.getChannel().getId() : "", ticket);
+      ticketByOwnerCache.put(ticket.getOwner().getId(), ticket);
     } else {
       ticketByIdCache.invalidate(id);
     }
@@ -183,6 +216,7 @@ public class Database {
 
       ticket.setId(id);
       ticketByIdCache.put(id, ticket);
+      ticketByOwnerCache.put(ticket.getOwner().getId(), ticket);
       return id;
     } else {
       jdbi.useHandle(
