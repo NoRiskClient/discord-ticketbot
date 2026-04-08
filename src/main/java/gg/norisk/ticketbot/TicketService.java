@@ -34,6 +34,10 @@ public class TicketService {
 
   public Result<Ticket> createTicket(
       Map<String, String> info, TicketCategory category, User owner, Locale locale) {
+    if (getOpenTicketByOwner(owner) != null) {
+      return Result.failure("message.ticket.creation.error.ticket_already_open");
+    }
+
     Ticket ticket =
         Ticket.builder()
             .id(0)
@@ -336,6 +340,16 @@ public class TicketService {
     } else {
       return database.getTicketByChannelId(channel.getId());
     }
+  }
+
+  @Nullable
+  @Contract("null -> null")
+  public Ticket getOpenTicketByOwner(@Nullable User owner) {
+    if (owner == null) {
+      return null;
+    }
+
+    return database.getOpenTicketByOwnerId(owner.getId());
   }
 
   private String generateChannelName(Ticket ticket) {

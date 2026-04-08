@@ -94,7 +94,10 @@ public class TicketCreationModalInteraction extends Interaction {
                       new HashMap<>(
                           Map.of(
                               "ERROR",
-                              Optional.ofNullable(result.getError()).orElse("Unknown error"))),
+                              TranslationUtils.translate(
+                                  Optional.ofNullable(result.getError())
+                                      .orElse("message.generic.error.unknown"),
+                                  event.getUserLocale().toLocale()))),
                       config.getGuild(jda),
                       event.getUser())
                   .build())
