@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
 
 public class TicketCreationModalInteraction extends Interaction {
@@ -81,6 +82,7 @@ public class TicketCreationModalInteraction extends Interaction {
                       event.getUser())
                   .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
                   .build())
+          .addActionRow(Button.danger("close", "Close"))
           .queue();
     } else {
       event

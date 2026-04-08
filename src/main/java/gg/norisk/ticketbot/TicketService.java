@@ -15,6 +15,8 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -40,20 +42,6 @@ public class TicketService {
 
     int id = database.saveTicket(ticket);
 
-    StringBuilder details = new StringBuilder();
-
-    for (Map.Entry<String, String> entry : info.entrySet()) {
-      details
-          .append("**")
-          .append(
-              TranslationUtils.translate(
-                  "category." + category.getId() + "." + entry.getKey() + ".label",
-                  config.getStaffLocale()))
-          .append("**\n")
-          .append(entry.getValue())
-          .append("\n");
-    }
-
     ThreadChannel channel =
         config
             .getUnclaimedForum(jda)
@@ -75,11 +63,15 @@ public class TicketService {
                                         "USER_MENTION",
                                         owner.getAsMention(),
                                         "DETAILS",
-                                        details.toString())),
+                                        buildDetails(
+                                            ticket.getCategory(),
+                                            ticket.getInfo(),
+                                            config.getStaffLocale()))),
                                 config.getGuild(jda),
                                 owner)
                             .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
                             .build())
+                    .addActionRow(Button.primary("claim", "Claim"), Button.danger("close", "Close"))
                     .build())
             .complete()
             .getThreadChannel();
@@ -90,7 +82,8 @@ public class TicketService {
     return Result.success(ticket);
   }
 
-  public Result<Void> claimTicket(@NotNull Ticket ticket, @NotNull User supporter) {
+  public Result<Void> claimTicket(
+      @NotNull Ticket ticket, @NotNull User supporter, @Nullable IReplyCallback event) {
     if (ticket.getOwner().getIdLong() == supporter.getIdLong()) {
       return Result.failure("supporter_is_owner");
     }
@@ -100,9 +93,62 @@ public class TicketService {
     }
 
     ticket.setSupporter(supporter);
+
+    if (event != null) {
+      event
+          .replyEmbeds(
+              Embeds.TICKET_CLAIM_SUCCESS.toBuilder(
+                      config, config.getStaffLocale(), Map.of(), config.getGuild(jda), supporter)
+                  .build())
+          .setEphemeral(true)
+          .complete();
+    }
+
+    Objects.requireNonNull(ticket.getChannel()).delete().queue();
+
+    ThreadChannel channel =
+        config
+            .getForum(jda, ticket.getCategory())
+            .createForumPost(
+                generateChannelName(ticket),
+                new MessageCreateBuilder()
+                    .addEmbeds(
+                        Embeds.INITIAL_MESSAGE.toBuilder(
+                                config,
+                                config.getStaffLocale(),
+                                new HashMap<>(
+                                    Map.of(
+                                        "ID",
+                                        String.valueOf(ticket.getId()),
+                                        "CATEGORY",
+                                        TranslationUtils.translate(
+                                            "category." + ticket.getCategory().getId() + ".label",
+                                            config.getStaffLocale()),
+                                        "USER_MENTION",
+                                        ticket.getOwner().getAsMention(),
+                                        "DETAILS",
+                                        buildDetails(
+                                            ticket.getCategory(),
+                                            ticket.getInfo(),
+                                            config.getStaffLocale()))),
+                                config.getGuild(jda),
+                                ticket.getOwner())
+                            .setImage("https://cdn.norisk.gg/misc/nrc_ticket_banner.png")
+                            .build())
+                    .addActionRow(Button.danger("close", "Close"))
+                    .build())
+            .complete()
+            .getThreadChannel();
+
+    ticket.setChannel(channel);
     database.saveTicket(ticket);
 
-    Objects.requireNonNull(ticket.getChannel())
+    channel.addThreadMember(supporter).queue();
+
+    ticket
+        .getOwner()
+        .openPrivateChannel()
+        .complete()
         .sendMessageEmbeds(
             Embeds.TICKET_CLAIM.toBuilder(
                     config,
@@ -117,7 +163,10 @@ public class TicketService {
   }
 
   public Result<Void> closeTicket(
-      @NotNull Ticket ticket, @NotNull Member closer, @Nullable String reason) {
+      @NotNull Ticket ticket,
+      @NotNull Member closer,
+      @Nullable String reason,
+      @Nullable IReplyCallback event) {
     if (!closer.getRoles().contains(jda.getRoleById(config.getStaffId()))
         && ticket.getSupporter() != null) {
       return Result.failure("only_supporter_can_close");
@@ -126,7 +175,37 @@ public class TicketService {
     ticket.setClosedAt(Instant.now());
     ticket.setCloser(closer.getUser());
 
-    Objects.requireNonNull(ticket.getChannel()).delete().queue();
+    if (event != null) {
+      event
+          .replyEmbeds(
+              Embeds.TICKET_CLOSE_SUCCESS.toBuilder(
+                      config,
+                      config.getStaffLocale(),
+                      new HashMap<>(Map.of("REASON", reason == null ? "N/A" : reason)),
+                      config.getGuild(jda),
+                      closer.getUser())
+                  .build())
+          .setEphemeral(true)
+          .complete();
+    }
+
+    Objects.requireNonNull(ticket.getChannel())
+        .sendMessageEmbeds(
+            Embeds.TICKET_CLOSE.toBuilder(
+                    config,
+                    config.getStaffLocale(),
+                    new HashMap<>(
+                        Map.of(
+                            "CLOSER",
+                            closer.getAsMention(),
+                            "REASON",
+                            reason == null ? "N/A" : reason)),
+                    config.getGuild(jda),
+                    closer.getUser())
+                .build())
+        .complete();
+
+    Objects.requireNonNull(ticket.getChannel()).getManager().setArchived(true).queue();
 
     return Result.success(null);
   }
@@ -156,5 +235,22 @@ public class TicketService {
 
   private String generateChannelName(Ticket ticket) {
     return ticket.getCategory().getId() + "-" + ticket.getId() + "-" + ticket.getOwner().getName();
+  }
+
+  public String buildDetails(TicketCategory category, Map<String, String> info, Locale locale) {
+    StringBuilder details = new StringBuilder();
+
+    for (Map.Entry<String, String> entry : info.entrySet()) {
+      details
+          .append("**")
+          .append(
+              TranslationUtils.translate(
+                  "category." + category.getId() + "." + entry.getKey() + ".label", locale))
+          .append("**\n")
+          .append(entry.getValue())
+          .append("\n");
+    }
+
+    return details.toString();
   }
 }

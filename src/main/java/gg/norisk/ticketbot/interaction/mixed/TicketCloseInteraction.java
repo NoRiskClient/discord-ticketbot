@@ -42,22 +42,19 @@ public class TicketCloseInteraction extends Interaction {
   private void handleShared(@NotNull IReplyCallback event) {
     Result<Void> result =
         ticketService.closeTicket(
-            Objects.requireNonNull(ticket), Objects.requireNonNull(event.getMember()), null);
+            Objects.requireNonNull(ticket), Objects.requireNonNull(event.getMember()), null, event);
 
     if (result.isFailure()) {
       replyEphemeralAndQueue(
           new EmbedBuildInfo(
               Embeds.TICKET_CLOSE_FAILED,
-              ticket.getLocale(),
+              event.getUserLocale().toLocale(),
               new HashMap<>(
                   Map.of(
                       "ERROR",
                       TranslationUtils.translate(
                           "message.ticket.close.error." + result.getError(),
-                          ticket.getLocale())))));
-    } else {
-      replyEphemeralAndQueue(
-          new EmbedBuildInfo(Embeds.TICKET_CLOSE_SUCCESS, ticket.getLocale(), null));
+                          event.getUserLocale().toLocale())))));
     }
   }
 }

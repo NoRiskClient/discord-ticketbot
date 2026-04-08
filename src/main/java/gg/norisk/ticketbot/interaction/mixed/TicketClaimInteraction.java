@@ -40,22 +40,19 @@ public class TicketClaimInteraction extends Interaction {
 
   private void handleShared(IReplyCallback event) {
     Result<Void> result =
-        ticketService.claimTicket(Objects.requireNonNull(ticket), event.getUser());
+        ticketService.claimTicket(Objects.requireNonNull(ticket), event.getUser(), event);
 
     if (result.isFailure()) {
       replyEphemeralAndQueue(
           new EmbedBuildInfo(
               Embeds.TICKET_CLAIM_FAILED,
-              ticket.getLocale(),
+              event.getUserLocale().toLocale(),
               new HashMap<>(
                   Map.of(
                       "ERROR",
                       TranslationUtils.translate(
                           "message.ticket.claim.error." + result.getError(),
-                          ticket.getLocale())))));
-    } else {
-      replyEphemeralAndQueue(
-          new EmbedBuildInfo(Embeds.TICKET_CLAIM_SUCCESS, ticket.getLocale(), null));
+                          event.getUserLocale().toLocale())))));
     }
   }
 }

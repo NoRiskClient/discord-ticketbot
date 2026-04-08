@@ -80,6 +80,15 @@ public class Embeds {
 
   public static final EmbedDefinition TICKET_CLAIM_SUCCESS = success("ticket.claim");
 
+  public static final EmbedDefinition TICKET_CLOSE =
+      new EmbedDefinition(
+          "message.ticket.close.title",
+          "message.ticket.close.description",
+          true,
+          true,
+          List.of(),
+          null);
+
   public static final EmbedDefinition TICKET_CLOSE_FAILED =
       failure("message.ticket.close.failed.title", "$ERROR");
 

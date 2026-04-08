@@ -61,7 +61,7 @@ public class Ticket {
               ? null
               : jda.getThreadChannelById(r.getString("channelId"));
       User supporter =
-          r.getString("supporterId").isEmpty() ? null : jda.getUserById(r.getString("supporter"));
+          r.getString("supporterId").isEmpty() ? null : jda.getUserById(r.getString("supporterId"));
       User closer =
           r.getString("closerId").isEmpty() ? null : jda.getUserById(r.getString("closer"));
 
