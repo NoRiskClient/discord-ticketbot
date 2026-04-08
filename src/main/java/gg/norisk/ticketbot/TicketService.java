@@ -73,6 +73,7 @@ public class TicketService {
                             .build())
                     .addActionRow(Button.primary("claim", "Claim"), Button.danger("close", "Close"))
                     .build())
+            .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_WEEK)
             .complete()
             .getThreadChannel();
 
@@ -137,6 +138,7 @@ public class TicketService {
                             .build())
                     .addActionRow(Button.danger("close", "Close"))
                     .build())
+            .setAutoArchiveDuration(ThreadChannel.AutoArchiveDuration.TIME_1_WEEK)
             .complete()
             .getThreadChannel();
 
