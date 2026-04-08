@@ -12,6 +12,7 @@ import java.util.Objects;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
@@ -148,6 +149,18 @@ public class TicketService {
     channel.addThreadMember(supporter).queue();
 
     ticket
+        .getChannel()
+        .sendMessageEmbeds(
+            Embeds.TICKET_CLAIM.toBuilder(
+                    config,
+                    config.getStaffLocale(),
+                    new HashMap<>(Map.of("SUPPORTER_MENTION", supporter.getAsMention())),
+                    config.getGuild(jda),
+                    supporter)
+                .build())
+        .queue();
+
+    ticket
         .getOwner()
         .openPrivateChannel()
         .complete()
@@ -176,6 +189,7 @@ public class TicketService {
 
     ticket.setClosedAt(Instant.now());
     ticket.setCloser(closer.getUser());
+    database.saveTicket(ticket);
 
     if (event != null) {
       event
@@ -190,6 +204,20 @@ public class TicketService {
           .setEphemeral(true)
           .complete();
     }
+
+    MessageEmbed embed =
+        Embeds.TICKET_CLOSE.toBuilder(
+                config,
+                config.getStaffLocale(),
+                new HashMap<>(
+                    Map.of(
+                        "CLOSER",
+                        closer.getAsMention(),
+                        "REASON",
+                        reason == null ? "N/A" : reason)),
+                config.getGuild(jda),
+                closer.getUser())
+            .build();
 
     Objects.requireNonNull(ticket.getChannel())
         .sendMessageEmbeds(
@@ -207,7 +235,26 @@ public class TicketService {
                 .build())
         .complete();
 
-    Objects.requireNonNull(ticket.getChannel()).getManager().setArchived(true).queue();
+    ticket
+        .getOwner()
+        .openPrivateChannel()
+        .complete()
+        .sendMessageEmbeds(
+            Embeds.TICKET_CLOSE.toBuilder(
+                    config,
+                    ticket.getLocale(),
+                    new HashMap<>(
+                        Map.of(
+                            "CLOSER",
+                            closer.getAsMention(),
+                            "REASON",
+                            reason == null ? "N/A" : reason)),
+                    config.getGuild(jda),
+                    closer.getUser())
+                .build())
+        .queue();
+
+    ticket.getChannel().getManager().setArchived(true).queue();
 
     return Result.success(null);
   }
