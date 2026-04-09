@@ -2,10 +2,11 @@ package gg.norisk.ticketbot;
 
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.GenericSelectMenuInteractionEvent;
-import net.dv8tion.jda.api.events.message.GenericMessageEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 
@@ -37,7 +38,15 @@ public class EventListener extends ListenerAdapter {
   }
 
   @Override
-  public void onGenericMessage(@NotNull GenericMessageEvent event) {
-    ticketService.handleMessage(event);
+  public void onMessageContextInteraction(@NotNull MessageContextInteractionEvent event) {
+    Main.handleInteraction(
+        (event.getSubcommandGroup() == null ? "" : event.getSubcommandGroup() + " ")
+            + event.getSubcommandName(),
+        event);
+  }
+
+  @Override
+  public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+    ticketService.handleMessageReceived(event);
   }
 }

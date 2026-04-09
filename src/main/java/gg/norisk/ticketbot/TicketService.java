@@ -266,7 +266,7 @@ public class TicketService {
     return Result.success(null);
   }
 
-  public void handleMessage(@NotNull GenericMessageEvent event) {
+  public void handleMessageReceived(@NotNull GenericMessageEvent event) {
     if (event.isFromType(ChannelType.PRIVATE) && isOpenTicketChannel(event.getChannel())) {
       Ticket ticket = getTicketByChannel(event.getChannel());
 
@@ -336,7 +336,7 @@ public class TicketService {
 
     if (channel instanceof PrivateChannel privateChannel) {
       return database.getOpenTicketByOwnerId(
-          Objects.requireNonNull(privateChannel.getUser()).getId());
+          Objects.requireNonNull(privateChannel.retrieveUser().complete()).getId());
     } else {
       return database.getTicketByChannelId(channel.getId());
     }

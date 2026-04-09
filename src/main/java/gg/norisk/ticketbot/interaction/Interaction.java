@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
@@ -94,6 +95,8 @@ public abstract class Interaction {
 
   public void handleSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {}
 
+  public void handleMessageContextInteraction(@NotNull MessageContextInteractionEvent event) {}
+
   public boolean conditionsFulfilled(IReplyCallback event) {
     Member member = event.getMember();
 
@@ -143,6 +146,7 @@ public abstract class Interaction {
       case ModalInteractionEvent e -> handleModalInteraction(e);
       case StringSelectInteractionEvent e -> handleStringSelectInteraction(e);
       case SlashCommandInteractionEvent e -> handleSlashCommandInteraction(e);
+      case MessageContextInteractionEvent e -> handleMessageContextInteraction(e);
       default -> {}
     }
   }
