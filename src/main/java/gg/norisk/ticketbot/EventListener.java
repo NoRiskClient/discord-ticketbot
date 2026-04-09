@@ -1,5 +1,6 @@
 package gg.norisk.ticketbot;
 
+import java.util.Locale;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
@@ -39,10 +40,7 @@ public class EventListener extends ListenerAdapter {
 
   @Override
   public void onMessageContextInteraction(@NotNull MessageContextInteractionEvent event) {
-    Main.handleInteraction(
-        (event.getSubcommandGroup() == null ? "" : event.getSubcommandGroup() + " ")
-            + event.getSubcommandName(),
-        event);
+    Main.handleInteraction(event.getName().toLowerCase(Locale.ROOT), event);
   }
 
   @Override

@@ -5,10 +5,7 @@ import gg.norisk.ticketbot.entities.Ticket;
 import gg.norisk.ticketbot.util.Result;
 import gg.norisk.ticketbot.util.TranslationUtils;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
@@ -17,6 +14,7 @@ import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
@@ -266,8 +264,38 @@ public class TicketService {
     return Result.success(null);
   }
 
+  public Result<Void> forwardSupporterMessage(
+      @NotNull Message message, @NotNull Channel channel, @NotNull User user) {
+    if (channel.getType() != ChannelType.GUILD_PUBLIC_THREAD || !isTicketChannel(channel)) {
+      return Result.failure("message.ticket.forward_message.error.not_in_ticket_thread");
+    }
+
+    Ticket ticket = Objects.requireNonNull(getTicketByChannel(channel));
+
+    if (ticket.getSupporter() == null) {
+      return Result.failure("message.ticket.forward_message.error.ticket_not_claimed");
+    }
+
+    if (ticket.getClosedAt() != null) {
+      return Result.failure("message.ticket.forward_message.error.ticket_closed");
+    }
+
+    if (message.getAuthor().isBot()) {
+      return Result.failure("message.ticket.forward_message.error.message_from_bot");
+    }
+
+    ticket.getOwner().openPrivateChannel().complete().sendMessage(message.getContentRaw()).queue();
+    message.addReaction(Emoji.fromUnicode("U+1F4E8")).queue(); // :incoming_envelope:
+
+    return Result.success(null);
+  }
+
   public void handleMessageReceived(@NotNull GenericMessageEvent event) {
-    if (event.isFromType(ChannelType.PRIVATE) && isOpenTicketChannel(event.getChannel())) {
+    Message message = event.getChannel().retrieveMessageById(event.getMessageId()).complete();
+
+    if (event.isFromType(ChannelType.PRIVATE)
+        && isOpenTicketChannel(event.getChannel())
+        && !message.getAuthor().isBot()) {
       Ticket ticket = getTicketByChannel(event.getChannel());
 
       Webhook webhook;
@@ -297,8 +325,6 @@ public class TicketService {
           webhook = config.getUnclaimedForum(jda).createWebhook("Ticket Webhook").complete();
         }
       }
-
-      Message message = event.getChannel().retrieveMessageById(event.getMessageId()).complete();
 
       webhook
           .sendMessage(new MessageCreateBuilder().setContent(message.getContentRaw()).build())

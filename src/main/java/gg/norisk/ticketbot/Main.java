@@ -5,6 +5,7 @@ import gg.norisk.ticketbot.interaction.Interaction;
 import gg.norisk.ticketbot.interaction.InteractionFactory;
 import gg.norisk.ticketbot.interaction.commands.TicketCreateCommand;
 import gg.norisk.ticketbot.interaction.commands.VersionCommand;
+import gg.norisk.ticketbot.interaction.message.ForwardMessageInteraction;
 import gg.norisk.ticketbot.interaction.mixed.TicketClaimInteraction;
 import gg.norisk.ticketbot.interaction.mixed.TicketCloseInteraction;
 import gg.norisk.ticketbot.interaction.modals.TicketCreationModalInteraction;
@@ -21,10 +22,7 @@ import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
-import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
-import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
-import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
+import net.dv8tion.jda.api.interactions.commands.build.*;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
@@ -113,7 +111,8 @@ public class Main {
         VersionCommand::new,
         TicketCreateCommand::new,
         TicketClaimInteraction::new,
-        TicketCloseInteraction::new);
+        TicketCloseInteraction::new,
+        ForwardMessageInteraction::new);
 
     log.debug("Registering commands...");
 
@@ -128,7 +127,7 @@ public class Main {
       }
     }
 
-    jda.updateCommands().addCommands(parent).queue();
+    jda.updateCommands().addCommands(parent).addCommands(Interaction.MESSAGE_COMMANDS).queue();
 
     jda.addEventListener(new EventListener(ticketService));
 
@@ -177,9 +176,10 @@ public class Main {
   }
 
   public static void handleInteraction(String s, IReplyCallback event) {
-    log.debug("Received interaction with id: {}", s);
-
     String id = s.split(" ")[0];
+
+    log.debug("Received interaction with id: {} ({})", s, id);
+
     if (INTERACTIONS.containsKey(id)) {
       Interaction interaction = INTERACTIONS.get(id);
       if (interaction instanceof ArgumentedInteraction argumented) {

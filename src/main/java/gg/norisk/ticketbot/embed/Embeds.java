@@ -15,13 +15,12 @@ public class Embeds {
           "message.interaction.wrong_channel.description");
 
   public static final EmbedDefinition TICKET_CREATION_START_FAILED =
-      failure("message.ticket.creation_start.failed.title", "$ERROR");
+      failure("ticket.creation_start");
 
   public static final EmbedDefinition TICKET_CREATION_START_SUCCESS =
       success("ticket.creation_start");
 
-  public static final EmbedDefinition TICKET_CREATION_FAILED =
-      failure("message.ticket.creation.failed.title", "$ERROR");
+  public static final EmbedDefinition TICKET_CREATION_FAILED = failure("ticket.creation");
 
   public static final EmbedDefinition TICKET_CREATION_SUCCESS =
       new EmbedDefinition(
@@ -76,8 +75,7 @@ public class Embeds {
           List.of(),
           null);
 
-  public static final EmbedDefinition TICKET_CLAIM_FAILED =
-      failure("message.ticket.claim.failed.title", "$ERROR");
+  public static final EmbedDefinition TICKET_CLAIM_FAILED = failure("ticket.claim");
 
   public static final EmbedDefinition TICKET_CLAIM_SUCCESS = success("ticket.claim");
 
@@ -90,10 +88,13 @@ public class Embeds {
           List.of(),
           null);
 
-  public static final EmbedDefinition TICKET_CLOSE_FAILED =
-      failure("message.ticket.close.failed.title", "$ERROR");
+  public static final EmbedDefinition TICKET_CLOSE_FAILED = failure("ticket.close");
 
   public static final EmbedDefinition TICKET_CLOSE_SUCCESS = success("ticket.close");
+
+  public static final EmbedDefinition MESSAGE_FORWARD_FAILED = failure("ticket.forward_message");
+
+  public static final EmbedDefinition MESSAGE_FORWARD_SUCCESS = success("ticket.forward_message");
 
   private static EmbedDefinition success(@Nullable String id) {
     return success(
@@ -106,9 +107,7 @@ public class Embeds {
   }
 
   private static EmbedDefinition failure(@Nullable String id) {
-    return failure(
-        id == null ? null : "message." + id + ".failed.title",
-        id == null ? null : "message." + id + ".failed.description");
+    return failure(id == null ? null : "message." + id + ".failed.title", "$ERROR");
   }
 
   private static EmbedDefinition failure(@Nullable String name, @Nullable String description) {

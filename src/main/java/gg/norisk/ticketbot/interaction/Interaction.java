@@ -23,6 +23,8 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
@@ -33,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 @Slf4j
 public abstract class Interaction {
   public static final Map<SubcommandGroupData, List<SubcommandData>> COMMANDS = new HashMap<>();
+  public static final List<CommandData> MESSAGE_COMMANDS = new ArrayList<>();
 
   protected static final SubcommandGroupData THREADS_GROUP =
       new SubcommandGroupData("thread", "Manages the ticket thread");
@@ -83,6 +86,10 @@ public abstract class Interaction {
     }
 
     COMMANDS.computeIfAbsent(group, k -> new ArrayList<>()).add(command);
+  }
+
+  protected void addMessageCommand(String name) {
+    MESSAGE_COMMANDS.add(Commands.message(name));
   }
 
   public abstract String getIdentifier();
@@ -147,7 +154,7 @@ public abstract class Interaction {
       case StringSelectInteractionEvent e -> handleStringSelectInteraction(e);
       case SlashCommandInteractionEvent e -> handleSlashCommandInteraction(e);
       case MessageContextInteractionEvent e -> handleMessageContextInteraction(e);
-      default -> {}
+      default -> log.error("Unknown interaction type: {}", event.getClass().getName());
     }
   }
 
