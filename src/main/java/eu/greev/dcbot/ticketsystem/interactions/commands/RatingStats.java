@@ -41,7 +41,7 @@ public class RatingStats extends AbstractCommand {
 
         builder.addField("Overview",
                 "Total Ratings: **" + totalRatings + "**\n" +
-                        "Overall Average: **" + String.format("%.2f", overallAvg) + "** " + getStarDisplay(overallAvg),
+                        "Overall Average: **" + String.format("%.2f", overallAvg) + "** " + SupporterRatingStatsHelper.starDisplay(overallAvg),
                 false);
 
         Map<String, Double> avgRatings = ratingData.averageRatingPerSupporter();
@@ -95,10 +95,6 @@ public class RatingStats extends AbstractCommand {
             }
         }
         return sb.toString();
-    }
-
-    private String getStarDisplay(double avg) {
-        return SupporterRatingStatsHelper.starDisplay(avg);
     }
 
     private String getUserMention(String id) {

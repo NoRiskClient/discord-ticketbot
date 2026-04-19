@@ -226,15 +226,4 @@ public class XpService {
         return result;
     }
 
-    /**
-     * @deprecated Use {@link #awardTicketXp(Ticket, Integer)} instead.
-     * This old method is kept for backwards compatibility but should not be used.
-     */
-    @Deprecated(since = "2025-12-29")
-    public boolean awardTicketXp(String channelId, String supporterId, Integer rating) {
-        log.warn("[XP] Using deprecated awardTicketXp method - please update to use Ticket object");
-        // This old method can't work properly anymore since we need full ticket data
-        // Just log a warning and return false
-        return false;
-    }
 }

@@ -182,7 +182,7 @@ public class RatingStatsScheduler {
         overview.append("**Tickets geschlossen:** ").append(closedTickets).append("\n");
         overview.append("**Bewertungen erhalten:** ").append(totalRatings);
         if (totalRatings > 0) {
-            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(getStarDisplay(avgRating)).append(")");
+            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(SupporterRatingStatsHelper.starDisplay(avgRating)).append(")");
         }
         builder.addField("Übersicht", overview.toString(), false);
 
@@ -230,7 +230,7 @@ public class RatingStatsScheduler {
         overview.append("**Tickets geschlossen:** ").append(closedTickets).append("\n");
         overview.append("**Bewertungen erhalten:** ").append(totalRatings);
         if (totalRatings > 0) {
-            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(getStarDisplay(avgRating)).append(")");
+            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(SupporterRatingStatsHelper.starDisplay(avgRating)).append(")");
         }
         builder.addField("Übersicht", overview.toString(), false);
 
@@ -277,7 +277,7 @@ public class RatingStatsScheduler {
         overview.append("**Tickets geschlossen:** ").append(closedTickets).append("\n");
         overview.append("**Bewertungen erhalten:** ").append(totalRatings);
         if (totalRatings > 0) {
-            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(getStarDisplay(avgRating)).append(")");
+            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(SupporterRatingStatsHelper.starDisplay(avgRating)).append(")");
         }
         builder.addField("Übersicht", overview.toString(), false);
 
@@ -393,7 +393,4 @@ public class RatingStatsScheduler {
         }
     }
 
-    private String getStarDisplay(double avg) {
-        return SupporterRatingStatsHelper.starDisplay(avg);
-    }
 }

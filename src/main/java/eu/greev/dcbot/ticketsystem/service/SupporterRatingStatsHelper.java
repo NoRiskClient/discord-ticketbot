@@ -9,8 +9,6 @@ import java.util.stream.Stream;
  * Shared helper to keep supporter rating leaderboards consistent across commands and schedulers.
  */
 public final class SupporterRatingStatsHelper {
-    private SupporterRatingStatsHelper() {
-    }
 
     public static List<SupporterRatingEntry> topSupporters(Map<String, Double> avgRatings,
                                                             Map<String, Integer> countRatings,

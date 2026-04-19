@@ -3,10 +3,7 @@ package eu.greev.dcbot.ticketsystem.interactions.modals;
 import eu.greev.dcbot.ticketsystem.entities.Rating;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import eu.greev.dcbot.ticketsystem.interactions.Interaction;
-import eu.greev.dcbot.ticketsystem.service.RatingData;
-import eu.greev.dcbot.ticketsystem.service.SupporterSettingsData;
-import eu.greev.dcbot.ticketsystem.service.TicketService;
-import eu.greev.dcbot.ticketsystem.service.XpService;
+import eu.greev.dcbot.ticketsystem.service.*;
 import eu.greev.dcbot.utils.Config;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -96,7 +93,7 @@ public class RatingModal implements Interaction {
 
         ratingData.saveRating(rating);
 
-        String starDisplay = getStarDisplay(stars);
+        String starDisplay = SupporterRatingStatsHelper.starDisplay(stars);
         EmbedBuilder confirmation = new EmbedBuilder()
                 .setColor(Color.GREEN)
                 .setTitle("Thank You!")
@@ -129,10 +126,6 @@ public class RatingModal implements Interaction {
         }
     }
 
-    private String getStarDisplay(int stars) {
-        return "\u2605".repeat(stars) + "\u2606".repeat(5 - stars);
-    }
-
     private Color getRatingColor(int stars) {
         if (stars >= 4) {
             return Color.GREEN;
@@ -144,7 +137,7 @@ public class RatingModal implements Interaction {
     }
 
     private String sendRatingNotification(Ticket ticket, int stars, String message) {
-        String starDisplay = getStarDisplay(stars);
+        String starDisplay = SupporterRatingStatsHelper.starDisplay(stars);
         Color embedColor = getRatingColor(stars);
 
         // Generate transcript (will return null for sensitive categories)
