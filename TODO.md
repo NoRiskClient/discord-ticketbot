@@ -1,5 +1,0 @@
-- [x] Configuration
-- [x] Database Implementation
-- [ ] Custom Embed Builder
-- [ ] Interaction Handling
-- [ ] Basic Ticket System
