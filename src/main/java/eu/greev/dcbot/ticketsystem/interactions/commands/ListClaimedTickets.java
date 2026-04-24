@@ -25,7 +25,7 @@ public class ListClaimedTickets extends AbstractCommand {
         }
 
         StringBuilder stringBuilder = new StringBuilder();
-        ticketService.getTicketData().getOpenTicketsChannelIdsBySupporter(member.getId()).forEach(id -> stringBuilder.append("<#").append(id).append(">\n"));
+        ticketService.getTicketData().getOpenTicketsChannelIdsBySupporter(member.getId()).forEach(id -> stringBuilder.append("- <#").append(id).append(">\n"));
 
         event.replyEmbeds(new EmbedBuilder()
                 .setColor(Color.decode(config.getColor()))
@@ -33,6 +33,6 @@ public class ListClaimedTickets extends AbstractCommand {
                 .setDescription(stringBuilder.isEmpty() ? "You don't have any open tickets." : stringBuilder.toString())
                 .setAuthor(member.getEffectiveName(), null, member.getEffectiveAvatarUrl())
                 .setFooter(config.getServerName(), config.getServerLogo())
-                .build()).queue();
+                .build()).setEphemeral(true).queue();
     }
 }
