@@ -153,6 +153,7 @@ public class Main {
                         .addOption(OptionType.STRING, "type", "Report type: daily, weekly, monthly", true))
                 .addSubcommands(new SubcommandData("set-privacy", "Toggle ob deine XP/Ratings öffentlich angezeigt werden")
                         .addOption(OptionType.STRING, "mode", "visible oder hidden", true))
+                .addSubcommands(new SubcommandData("list-claimed", "List your claimed tickets"))
         ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
@@ -211,6 +212,8 @@ public class Main {
         registerInteraction("rating-stats", new RatingStats(config, ticketService, missingPerm, jda, ratingData));
         registerInteraction("debug-stats", new DebugStats(config, ticketService, missingPerm, jda));
         registerInteraction("set-privacy", new SetPrivacy(config, ticketService, missingPerm, jda, supporterSettingsData));
+
+        registerInteraction("list-claimed", new ListClaimedTickets(config, ticketService, missingPerm, jda));
 
         log.info("Started: {}", OffsetDateTime.now(ZoneId.systemDefault()));
 

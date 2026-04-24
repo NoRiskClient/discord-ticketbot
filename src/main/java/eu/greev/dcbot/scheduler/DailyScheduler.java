@@ -60,9 +60,9 @@ public class DailyScheduler {
 
             embedBuilder.setDescription(description.toString());
 
-            var logChannel = jda.getTextChannelById(config.getLogChannel());
-            if (logChannel != null) {
-                logChannel.sendMessage(mentions.toString())
+            var channel = jda.getTextChannelById(config.getSupporterReminderChannel() == 0 ? config.getLogChannel() : config.getSupporterReminderChannel());
+            if (channel != null) {
+                channel.sendMessage(mentions.toString())
                         .addEmbeds(embedBuilder.build())
                         .queue();
             }
