@@ -6,7 +6,6 @@ import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
@@ -81,7 +80,7 @@ public class RatingStats extends AbstractCommand {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < topSupporters.size(); i++) {
             SupporterRatingStatsHelper.SupporterRatingEntry entry = topSupporters.get(i);
-            String mention = getUserMention(entry.supporterId());
+            String mention = "<@" + entry.supporterId() + ">";
             double avg = entry.avgRating();
             int count = entry.ratingCount();
             sb.append(String.format("%d. %s %s (%.2f avg, %d ratings)",
@@ -97,15 +96,4 @@ public class RatingStats extends AbstractCommand {
         return sb.toString();
     }
 
-    private String getUserMention(String id) {
-        try {
-            User user = jda.retrieveUserById(id).complete();
-            if (user != null) {
-                return user.getAsMention();
-            }
-        } catch (Exception ignored) {
-            // fall through to default mention
-        }
-        return "<@" + id + ">";
-    }
 }
