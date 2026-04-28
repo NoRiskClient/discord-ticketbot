@@ -37,6 +37,12 @@ public class Transcript {
         recentChanges.add(message);
     }
 
+    public void addInfoMessage(String key, String info, int ticketId) {
+        Message message = new Message(0, info, "Info-"+key, Instant.now().getEpochSecond(), ticketId);
+        messages.add(message);
+        recentChanges.add(message);
+    }
+
     public void editMessage(long messageId, String content, long timeEdited) {
         Edit edit = new Edit(content, timeEdited, messageId);
 

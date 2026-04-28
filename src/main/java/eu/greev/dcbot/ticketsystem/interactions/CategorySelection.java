@@ -5,6 +5,7 @@ import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 
 @AllArgsConstructor
@@ -25,7 +26,7 @@ public class CategorySelection implements Interaction {
         }
 
         event.getMessage().editMessageComponents(
-                net.dv8tion.jda.api.interactions.components.ActionRow.of(selectionBuilder.build())
+                ActionRow.of(selectionBuilder.build())
         ).queue();
     }
 }

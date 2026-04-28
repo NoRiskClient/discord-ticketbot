@@ -1,5 +1,6 @@
 package eu.greev.dcbot.ticketsystem.interactions.commands;
 
+import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -27,7 +28,7 @@ public class Stats extends AbstractCommand {
             return;
         }
 
-        var data = ticketService.getTicketData();
+        TicketData data = ticketService.getTicketData();
         int total = data.countTotalTickets();
         int open = data.countOpenTickets();
         int waiting = data.countWaitingTickets();

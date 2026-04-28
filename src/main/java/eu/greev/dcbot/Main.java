@@ -28,6 +28,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -49,6 +50,7 @@ import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({"squid:S1192"}) // String literals should not be duplicated
 @Slf4j
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
@@ -117,7 +119,8 @@ public class Main {
 
         ticketService.loadOverflowCategories();
 
-        jda.updateCommands().addCommands(Commands.slash("ticket", "Manage the ticket system")
+        SlashCommandData ticketCommand = Commands.slash("ticket", "Manage the ticket system");
+        jda.updateCommands().addCommands(ticketCommand
                 .addSubcommands(new SubcommandData("add", "Add a User to this ticket")
                         .addOption(OptionType.USER, "member", "The user adding to the current ticket", true))
                 .addSubcommands(new SubcommandData("remove", "Remove a User from this ticket")
@@ -153,7 +156,7 @@ public class Main {
                         .addOption(OptionType.STRING, "type", "Report type: daily, weekly, monthly", true))
                 .addSubcommands(new SubcommandData("set-privacy", "Toggle ob deine XP/Ratings öffentlich angezeigt werden")
                         .addOption(OptionType.STRING, "mode", "visible oder hidden", true))
-        ).queue(s -> s.get(0).getSubcommands().forEach(c -> {
+        ).queue(s -> s.getFirst().getSubcommands().forEach(c -> {
                     if (c.getName().equals("get-tickets")) {
                         getTicketCommandId = c.getId();
                     } else if (c.getName().equals("create")) {
@@ -217,6 +220,11 @@ public class Main {
     }
 
     private static void initDatasource() {
+        // Set SQLite temp directory to avoid permission issues with C:\Windows\TEMP
+        String sqliteTempDir = new File("./Tickets/temp").getAbsolutePath();
+        new File(sqliteTempDir).mkdirs();
+        System.setProperty("org.sqlite.tmpdir", sqliteTempDir);
+
         SQLiteDataSource ds = new SQLiteDataSource();
         ds.setUrl("jdbc:sqlite:./Tickets/tickets.db");
         jdbi = Jdbi.create(ds);
@@ -286,3 +294,4 @@ public class Main {
         CATEGORIES.add(category);
     }
 }
+

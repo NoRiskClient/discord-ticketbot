@@ -3,19 +3,14 @@ package eu.greev.dcbot.ticketsystem.interactions.modals;
 import eu.greev.dcbot.ticketsystem.entities.Rating;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import eu.greev.dcbot.ticketsystem.interactions.Interaction;
-import eu.greev.dcbot.ticketsystem.service.RatingData;
-import eu.greev.dcbot.ticketsystem.service.SupporterSettingsData;
-import eu.greev.dcbot.ticketsystem.service.TicketService;
-import eu.greev.dcbot.ticketsystem.service.XpService;
+import eu.greev.dcbot.ticketsystem.service.*;
 import eu.greev.dcbot.utils.Config;
-import me.ryzeon.transcripts.DiscordHtmlTranscripts;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
-import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.awt.*;
 import java.time.Instant;
@@ -98,7 +93,7 @@ public class RatingModal implements Interaction {
 
         ratingData.saveRating(rating);
 
-        String starDisplay = getStarDisplay(stars);
+        String starDisplay = SupporterRatingStatsHelper.starDisplay(stars);
         EmbedBuilder confirmation = new EmbedBuilder()
                 .setColor(Color.GREEN)
                 .setTitle("Thank You!")
@@ -131,41 +126,22 @@ public class RatingModal implements Interaction {
         }
     }
 
-    private String getStarDisplay(int stars) {
-        return "\u2605".repeat(stars) + "\u2606".repeat(5 - stars);
+    private Color getRatingColor(int stars) {
+        if (stars >= 4) {
+            return Color.GREEN;
+        } else if (stars == 3) {
+            return Color.YELLOW;
+        } else {
+            return Color.RED;
+        }
     }
 
     private String sendRatingNotification(Ticket ticket, int stars, String message) {
-        String starDisplay = getStarDisplay(stars);
-        Color embedColor = stars >= 4 ? Color.GREEN : stars >= 3 ? Color.YELLOW : Color.RED;
+        String starDisplay = SupporterRatingStatsHelper.starDisplay(stars);
+        Color embedColor = getRatingColor(stars);
 
-        // Generate HTML transcript and upload to log channel to get URL
-        String transcriptUrl = null;
-        try {
-            if (ticket.getTextChannel() != null && config.getLogChannel() != 0) {
-                // Fetch messages first to check if channel has content
-                var messages = ticket.getTextChannel().getIterableHistory()
-                        .takeAsync(1000)
-                        .get();
-
-                if (messages != null && !messages.isEmpty()) {
-                    FileUpload transcriptUpload = DiscordHtmlTranscripts.getInstance()
-                            .createTranscript(ticket.getTextChannel(), "transcript-" + ticket.getId() + ".html");
-
-                    var logChannel = jda.getTextChannelById(config.getLogChannel());
-                    if (logChannel != null) {
-                        var uploadMessage = logChannel.sendFiles(transcriptUpload).complete();
-                        // Use message jump URL instead of attachment URL for better Discord navigation
-                        transcriptUrl = uploadMessage.getJumpUrl();
-                    }
-                } else {
-                    log.warn("No messages found in ticket #{} channel, skipping transcript generation", ticket.getId());
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to generate/upload HTML transcript for ticket #{}: {}", ticket.getId(), e.getMessage());
-            // Continue without transcript - don't let this block the rating notification
-        }
+        // Generate transcript (will return null for sensitive categories)
+        String transcriptUrl = ticketService.sendTranscript(ticket);
 
         if (config.getRatingNotificationChannels() == null || config.getRatingNotificationChannels().isEmpty()) {
             return transcriptUrl;
@@ -177,7 +153,8 @@ public class RatingModal implements Interaction {
         String displayStars = hideStats ? "???" : stars + " Sterne";
         String displayStarIcons = hideStats ? "★★★★★" : starDisplay;
         String thumbnailUrl = hideStats ? null : ticket.getSupporter().getEffectiveAvatarUrl();
-        String displayFeedback = hideStats ? "Versteckt" : ((message != null && !message.isBlank()) ? message : "Kein Feedback");
+        String feedback = (message != null && !message.isBlank()) ? message : "Kein Feedback";
+        String displayFeedback = hideStats ? "Versteckt" : feedback;
 
         EmbedBuilder notification = new EmbedBuilder()
                 .setColor(embedColor)
@@ -191,17 +168,7 @@ public class RatingModal implements Interaction {
 
         notification.addField("Feedback", displayFeedback, false);
 
-        // Only add transcript link for non-sensitive categories
-        if (transcriptUrl != null && !ticket.getCategory().isSensitive()) {
-            notification.addField("📝 Transcript", "[Hier klicken](" + transcriptUrl + ")", false);
-        }
-
-        for (Long channelId : config.getRatingNotificationChannels()) {
-            var channel = jda.getTextChannelById(channelId);
-            if (channel != null) {
-                channel.sendMessageEmbeds(notification.build()).queue();
-            }
-        }
+        ticketService.appendTranscriptLinkAndSendCloseEmbed(transcriptUrl, ticket, notification);
 
         return transcriptUrl;
     }

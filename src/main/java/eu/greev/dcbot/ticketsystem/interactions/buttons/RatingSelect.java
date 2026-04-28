@@ -1,6 +1,7 @@
 package eu.greev.dcbot.ticketsystem.interactions.buttons;
 
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.service.SupporterRatingStatsHelper;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.events.Event;
@@ -54,7 +55,7 @@ public class RatingSelect extends AbstractButton {
             return;
         }
 
-        String starDisplay = getStarDisplay(stars);
+        String starDisplay = SupporterRatingStatsHelper.starDisplay(stars);
 
         TextInput message = TextInput.create("rating-message", "Feedback (Optional)", TextInputStyle.PARAGRAPH)
                 .setPlaceholder("Share any additional feedback about your support experience...")
@@ -69,7 +70,4 @@ public class RatingSelect extends AbstractButton {
         event.replyModal(modal).queue();
     }
 
-    private String getStarDisplay(int stars) {
-        return "\u2605".repeat(stars) + "\u2606".repeat(5 - stars);
-    }
 }

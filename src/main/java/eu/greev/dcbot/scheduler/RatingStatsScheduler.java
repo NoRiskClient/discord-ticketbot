@@ -1,6 +1,7 @@
 package eu.greev.dcbot.scheduler;
 
 import eu.greev.dcbot.ticketsystem.service.RatingData;
+import eu.greev.dcbot.ticketsystem.service.SupporterRatingStatsHelper;
 import eu.greev.dcbot.ticketsystem.service.SupporterSettingsData;
 import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.utils.Config;
@@ -42,11 +43,11 @@ public class RatingStatsScheduler {
     }
 
     public void start() {
-        scheduler.scheduleAtFixedRate(this::sendDailyReport, getInitialDelayForHour(9), 24 * 60 * 60, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::sendDailyReport, getInitialDelayForHour(9), 1, TimeUnit.DAYS);
 
-        scheduler.scheduleAtFixedRate(this::sendWeeklyReport, getInitialDelayForWeekly(), 7 * 24 * 60 * 60, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::sendWeeklyReport, getInitialDelayForWeekly(), 7, TimeUnit.DAYS);
 
-        scheduler.scheduleAtFixedRate(this::sendMonthlyReport, getInitialDelayForMonthly(), 30 * 24 * 60 * 60, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::sendMonthlyReport, getInitialDelayForMonthly(), 30, TimeUnit.DAYS);
 
         log.info("RatingStatsScheduler started - Daily reports at 9:00, Weekly reports on Monday 9:00, Monthly reports on 1st at 9:00");
     }
@@ -181,7 +182,7 @@ public class RatingStatsScheduler {
         overview.append("**Tickets geschlossen:** ").append(closedTickets).append("\n");
         overview.append("**Bewertungen erhalten:** ").append(totalRatings);
         if (totalRatings > 0) {
-            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(getStarDisplay(avgRating)).append(")");
+            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(SupporterRatingStatsHelper.starDisplay(avgRating)).append(")");
         }
         builder.addField("Übersicht", overview.toString(), false);
 
@@ -229,7 +230,7 @@ public class RatingStatsScheduler {
         overview.append("**Tickets geschlossen:** ").append(closedTickets).append("\n");
         overview.append("**Bewertungen erhalten:** ").append(totalRatings);
         if (totalRatings > 0) {
-            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(getStarDisplay(avgRating)).append(")");
+            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(SupporterRatingStatsHelper.starDisplay(avgRating)).append(")");
         }
         builder.addField("Übersicht", overview.toString(), false);
 
@@ -276,7 +277,7 @@ public class RatingStatsScheduler {
         overview.append("**Tickets geschlossen:** ").append(closedTickets).append("\n");
         overview.append("**Bewertungen erhalten:** ").append(totalRatings);
         if (totalRatings > 0) {
-            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(getStarDisplay(avgRating)).append(")");
+            overview.append(" (Ø ").append(String.format("%.2f", avgRating)).append(" ").append(SupporterRatingStatsHelper.starDisplay(avgRating)).append(")");
         }
         builder.addField("Übersicht", overview.toString(), false);
 
@@ -298,7 +299,7 @@ public class RatingStatsScheduler {
     private String formatTicketStats(Map<String, Integer> ticketsBySupporter, int limit) {
         StringBuilder sb = new StringBuilder();
         int count = 0;
-        for (var entry : ticketsBySupporter.entrySet()) {
+        for (Map.Entry<String, Integer> entry : ticketsBySupporter.entrySet()) {
             if (count >= limit) break;
             String userId = entry.getKey();
             boolean hideStats = supporterSettingsData.isHideStats(userId);
@@ -313,7 +314,7 @@ public class RatingStatsScheduler {
     private String formatTicketStatsRanked(Map<String, Integer> ticketsBySupporter, int limit) {
         StringBuilder sb = new StringBuilder();
         int rank = 1;
-        for (var entry : ticketsBySupporter.entrySet()) {
+        for (Map.Entry<String, Integer> entry : ticketsBySupporter.entrySet()) {
             if (rank > limit) break;
             String userId = entry.getKey();
             boolean hideStats = supporterSettingsData.isHideStats(userId);
@@ -327,42 +328,57 @@ public class RatingStatsScheduler {
     }
 
     private String formatRatingStats(Map<String, Double> avgRatings, Map<String, Integer> countRatings, int limit) {
+        List<SupporterRatingStatsHelper.SupporterRatingEntry> topSupporters
+                = SupporterRatingStatsHelper.topSupporters(avgRatings, countRatings, limit);
         StringBuilder sb = new StringBuilder();
-        int count = 0;
-        for (var entry : avgRatings.entrySet()) {
-            if (count >= limit) break;
-            String userId = entry.getKey();
+        for (SupporterRatingStatsHelper.SupporterRatingEntry entry : topSupporters) {
+            String userId = entry.supporterId();
             boolean hideStats = supporterSettingsData.isHideStats(userId);
             String mention = hideStats ? "Anonym" : getUserMention(userId);
             if (hideStats) {
                 sb.append(mention).append(": ★★★★★ (Ø ???, ???x)\n");
             } else {
-                double avg = entry.getValue();
-                int ratings = countRatings.getOrDefault(userId, 0);
-                sb.append(mention).append(": ").append(getStarDisplay(avg)).append(" (Ø ").append(String.format("%.2f", avg)).append(", ").append(ratings).append("x)\n");
+                double avg = entry.avgRating();
+                int ratings = entry.ratingCount();
+                sb.append(mention)
+                        .append(": ")
+                        .append(SupporterRatingStatsHelper.starDisplay(avg))
+                        .append(" (Ø ")
+                        .append(String.format("%.2f", avg))
+                        .append(", ")
+                        .append(ratings)
+                        .append("x)\n");
             }
-            count++;
         }
         return sb.toString().trim();
     }
 
     private String formatRatingStatsRanked(Map<String, Double> avgRatings, Map<String, Integer> countRatings, int limit) {
         StringBuilder sb = new StringBuilder();
-        int rank = 1;
-        for (var entry : avgRatings.entrySet()) {
-            if (rank > limit) break;
-            String userId = entry.getKey();
+        List<SupporterRatingStatsHelper.SupporterRatingEntry> topSupporters = SupporterRatingStatsHelper.topSupporters(avgRatings, countRatings, limit);
+        for (int i = 0; i < topSupporters.size(); i++) {
+            SupporterRatingStatsHelper.SupporterRatingEntry entry = topSupporters.get(i);
+            int rank = i + 1;
+            String userId = entry.supporterId();
             boolean hideStats = supporterSettingsData.isHideStats(userId);
             String mention = hideStats ? "Anonym" : getUserMention(userId);
             String medal = rank == 1 ? "🥇" : rank == 2 ? "🥈" : rank == 3 ? "🥉" : rank + ".";
             if (hideStats) {
                 sb.append(medal).append(" ").append(mention).append(": ★★★★★ (Ø ???, ???x)\n");
             } else {
-                double avg = entry.getValue();
-                int ratings = countRatings.getOrDefault(userId, 0);
-                sb.append(medal).append(" ").append(mention).append(": ").append(getStarDisplay(avg)).append(" (Ø ").append(String.format("%.2f", avg)).append(", ").append(ratings).append("x)\n");
+                double avg = entry.avgRating();
+                int ratings = entry.ratingCount();
+                sb.append(medal)
+                        .append(" ")
+                        .append(mention)
+                        .append(": ")
+                        .append(SupporterRatingStatsHelper.starDisplay(avg))
+                        .append(" (Ø ")
+                        .append(String.format("%.2f", avg))
+                        .append(", ")
+                        .append(ratings)
+                        .append("x)\n");
             }
-            rank++;
         }
         return sb.toString().trim();
     }
@@ -377,9 +393,4 @@ public class RatingStatsScheduler {
         }
     }
 
-    private String getStarDisplay(double avg) {
-        int fullStars = (int) Math.round(avg);
-        fullStars = Math.max(0, Math.min(5, fullStars));
-        return "★".repeat(fullStars) + "☆".repeat(5 - fullStars);
-    }
 }

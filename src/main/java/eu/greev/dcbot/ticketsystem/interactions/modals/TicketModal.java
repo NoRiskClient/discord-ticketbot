@@ -50,11 +50,13 @@ public class TicketModal implements Interaction {
                 EmbedBuilder errorEmbed = new EmbedBuilder()
                         .setColor(Color.RED)
                         .setTitle("Invalid Link")
-                        .setDescription("Please provide a valid **mclo.gs** link!\n\n" +
-                                "**How to create one:**\n" +
-                                "1. Go to [mclo.gs](https://mclo.gs)\n" +
-                                "2. Upload your log file\n" +
-                                "3. Copy the link")
+                        .setDescription("""
+                                Please provide a valid **mclo.gs** link!
+                                
+                                **How to create one:**
+                                1. Go to [mclo.gs](https://mclo.gs)
+                                2. Upload your log file
+                                3. Copy the link""")
                         .setFooter(config.getServerName(), config.getServerLogo());
                 event.getHook().sendMessageEmbeds(errorEmbed.build()).setEphemeral(true).queue();
                 return;
@@ -63,16 +65,21 @@ public class TicketModal implements Interaction {
 
         Optional<String> error = ticketService.createNewTicket(info, category, event.getUser());
 
-        if (error.isEmpty()) {
-            Ticket ticket = ticketService.getTicketByTicketId(ticketData.getLastTicketId());
-            builder.setAuthor(event.getMember().getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
-                    .setColor(Color.decode(config.getColor()))
-                    .addField("✅ **Ticket created**", "Successfully created a ticket for you " + ticket.getTextChannel().getAsMention(), false);
-            event.getHook().sendMessageEmbeds(builder.build()).setEphemeral(true).queue();
-        } else {
+        if (error.isPresent()) {
             builder.addField("❌ **Creating ticket failed**", error.get(), false);
-
             event.getHook().sendMessageEmbeds(builder.build()).setEphemeral(true).queue();
+            return;
+        }
+
+        Ticket ticket = ticketService.getTicketByTicketId(ticketData.getLastTicketId());
+        builder.setAuthor(event.getMember().getEffectiveName(), null, event.getMember().getEffectiveAvatarUrl())
+                .setColor(Color.decode(config.getColor()))
+                .addField("✅ **Ticket created**", "Successfully created a ticket for you " + ticket.getTextChannel().getAsMention(), false);
+        event.getHook().sendMessageEmbeds(builder.build()).setEphemeral(true).queue();
+
+        ticket.getTranscript().addInfoMessage("Category", category.getLabel(), ticket.getId());
+        for(Map.Entry<String, String> entry : info.entrySet()) {
+            ticket.getTranscript().addInfoMessage(entry.getKey().replace(" ", "-"), entry.getValue(), ticket.getId());
         }
     }
 
