@@ -83,6 +83,7 @@ public class TicketService {
                 .isOpen(true)
                 .category(category)
                 .info(info)
+                .createdAt(Instant.now().getEpochSecond())
                 .build();
 
         // Create DB record and get generated ticket ID before creating channels

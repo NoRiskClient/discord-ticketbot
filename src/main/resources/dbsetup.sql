@@ -38,7 +38,9 @@ CREATE TABLE IF NOT EXISTS tickets
 
     pendingCloser          VARCHAR DEFAULT ""   NOT NULL,
 
-    lastSupporterMessageAt BIGINT DEFAULT NULL
+    lastSupporterMessageAt BIGINT DEFAULT NULL,
+
+    createdAt              BIGINT DEFAULT NULL
 );
 CREATE TABLE IF NOT EXISTS messages
 (
