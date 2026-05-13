@@ -20,7 +20,8 @@ import java.util.Map;
 public class TicketData {
     private final JDA jda;
     private final Jdbi jdbi;
-    @Getter private final TranscriptData transcriptData;
+    @Getter
+    private final TranscriptData transcriptData;
 
     public TicketData(JDA jda, Jdbi jdbi) {
         this.jda = jda;
@@ -53,7 +54,8 @@ public class TicketData {
                                         ? jda.getThreadChannelById(resultSet.getString("threadID")) : null)
                                 .owner(jda.retrieveUserById(resultSet.getString("owner")).complete())
                                 .category(Main.CATEGORIES.stream().filter(c -> c.getId().equals(category)).findFirst().orElse(null))
-                                .info(mapper.readValue(resultSet.getString("info"), new TypeReference<>() {}))
+                                .info(mapper.readValue(resultSet.getString("info"), new TypeReference<>() {
+                                }))
                                 .isOpen(resultSet.getBoolean("isOpen"))
                                 .isWaiting(resultSet.getBoolean("isWaiting"))
                                 .remindersSent(resultSet.getInt("remindersSent"))
@@ -61,6 +63,7 @@ public class TicketData {
                                 .waitingSince(resultSet.getString("waitingSince") != null ? Instant.parse(resultSet.getString("waitingSince")) : null)
                                 .baseMessage(resultSet.getString("baseMessage"))
                                 .lastSupporterMessageAt(lastSupporterMessageAtWasNull ? null : lastSupporterMessageAt)
+                                .createdAt(resultSet.getLong("createdAt"))
                                 .involved(new ArrayList<>(List.of(resultSet.getString("involved").split(", "))));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
@@ -147,7 +150,7 @@ public class TicketData {
             return jdbi.withHandle(handle -> {
                 // If no ticketID (0), INSERT and return generated key; otherwise UPDATE and return existing id
                 if (ticket.getId() == 0) {
-                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                    var update = handle.createUpdate("INSERT INTO tickets (channelID, threadID, category, info, isWaiting, owner, supporter, involved, baseMessage, isOpen, waitingSince, remindersSent, closeMessage, closer, closedAt, pendingRatingSince, ratingRemindersSent, pendingCloser, lastSupporterMessageAt, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                     update
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
@@ -167,10 +170,11 @@ public class TicketData {
                             .bind(15, ticket.getPendingRatingSince() == null ? null : ticket.getPendingRatingSince().toString())
                             .bind(16, ticket.getRatingRemindersSent())
                             .bind(17, ticket.getPendingCloser() != null ? ticket.getPendingCloser().getId() : "")
-                            .bind(18, ticket.getLastSupporterMessageAt());
+                            .bind(18, ticket.getLastSupporterMessageAt())
+                            .bind(19, ticket.getCreatedAt());
                     return update.executeAndReturnGeneratedKeys("ticketID").mapTo(Integer.class).one();
                 } else {
-                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, closeMessage=?, closer=?, closedAt=?, pendingRatingSince=?, ratingRemindersSent=?, pendingCloser=?, lastSupporterMessageAt=? WHERE ticketID =?")
+                    handle.createUpdate("UPDATE tickets SET channelID=?, threadID=?, category=?, info=?, isWaiting=?, owner=?, supporter=?, involved=?, baseMessage=?, isOpen=?, waitingSince=?, remindersSent=?, closeMessage=?, closer=?, closedAt=?, pendingRatingSince=?, ratingRemindersSent=?, pendingCloser=?, lastSupporterMessageAt=?, createdAt=? WHERE ticketID =?")
                             .bind(0, ticket.getTextChannel() != null ? ticket.getTextChannel().getId() : "")
                             .bind(1, ticket.getThreadChannel() != null ? ticket.getThreadChannel().getId() : "")
                             .bind(2, ticket.getCategory().getId())
@@ -190,7 +194,8 @@ public class TicketData {
                             .bind(16, ticket.getRatingRemindersSent())
                             .bind(17, ticket.getPendingCloser() != null ? ticket.getPendingCloser().getId() : "")
                             .bind(18, ticket.getLastSupporterMessageAt())
-                            .bind(19, ticket.getId())
+                            .bind(19, ticket.getCreatedAt())
+                            .bind(20, ticket.getId())
                             .execute();
                     return ticket.getId();
                 }
@@ -227,6 +232,16 @@ public class TicketData {
                 .bind("limit", limit)
                 .reduceRows(new LinkedHashMap<>(), (map, row) -> {
                     map.put(row.getColumn("closer", String.class), row.getColumn("c", Integer.class));
+                    return map;
+                }));
+    }
+
+    public Map<String, Integer> topSupporters(int limit, int daysBack) {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = false AND supporter != '' GROUP BY supporter ORDER BY c DESC LIMIT :limit")
+                .bind("limit", limit)
+                .bind("createdAt", Instant.now().minus(daysBack, ChronoUnit.DAYS).getEpochSecond())
+                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
+                    map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));
     }
@@ -310,7 +325,7 @@ public class TicketData {
     public void markStaleTicketAsClosed(int ticketId) {
         long closedAt = Instant.now().getEpochSecond();
         jdbi.useHandle(handle -> handle.createUpdate(
-                "UPDATE tickets SET isOpen = false, isWaiting = false, closeMessage = 'Auto-closed: Channel not found', closedAt = ? WHERE ticketID = ?")
+                        "UPDATE tickets SET isOpen = false, isWaiting = false, closeMessage = 'Auto-closed: Channel not found', closedAt = ? WHERE ticketID = ?")
                 .bind(0, closedAt)
                 .bind(1, ticketId)
                 .execute());
