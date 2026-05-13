@@ -29,7 +29,7 @@ public class StatsSupporter extends AbstractCommand {
         var data = ticketService.getTicketData();
 
         int days = event.getOption("days").getAsInt();
-        Map<String, Integer> topClosers = data.topClosers(100, days);
+        Map<String, Integer> topClosers = data.topSupporters(100, days);
 
         EmbedBuilder builder = new EmbedBuilder()
                 .setColor(Color.decode(config.getColor()))

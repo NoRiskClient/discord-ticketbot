@@ -42,9 +42,6 @@ public class TicketData {
                     Long lastSupporterMessageAt = resultSet.getLong("lastSupporterMessageAt");
                     boolean lastSupporterMessageAtWasNull = resultSet.wasNull();
 
-                    Long createdAt = resultSet.getLong("createdAt");
-                    boolean createdAtWasNull = resultSet.wasNull();
-
                     ObjectMapper mapper = new ObjectMapper();
 
                     Ticket.TicketBuilder ticketBuilder;
@@ -66,7 +63,7 @@ public class TicketData {
                                 .waitingSince(resultSet.getString("waitingSince") != null ? Instant.parse(resultSet.getString("waitingSince")) : null)
                                 .baseMessage(resultSet.getString("baseMessage"))
                                 .lastSupporterMessageAt(lastSupporterMessageAtWasNull ? null : lastSupporterMessageAt)
-                                .createdAt(createdAtWasNull ? null : createdAt)
+                                .createdAt(resultSet.getLong("createdAt"))
                                 .involved(new ArrayList<>(List.of(resultSet.getString("involved").split(", "))));
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
@@ -239,22 +236,12 @@ public class TicketData {
                 }));
     }
 
-    public Map<String, Integer> topClosers(int limit, int daysBack) {
-        return jdbi.withHandle(handle -> handle.createQuery("SELECT closer, COUNT(*) as c FROM tickets WHERE isOpen = false AND closer != '' GROUP BY closer ORDER BY c DESC LIMIT :limit")
+    public Map<String, Integer> topSupporters(int limit, int daysBack) {
+        return jdbi.withHandle(handle -> handle.createQuery("SELECT supporter, COUNT(*) as c FROM tickets WHERE isOpen = false AND supporter != '' GROUP BY supporter ORDER BY c DESC LIMIT :limit")
                 .bind("limit", limit)
-                .bind("limit", daysBack) //TODO: Current date - days to set the date limit
+                .bind("createdAt", Instant.now().minus(daysBack, ChronoUnit.DAYS).getEpochSecond())
                 .reduceRows(new LinkedHashMap<>(), (map, row) -> {
-                    map.put(row.getColumn("closer", String.class), row.getColumn("c", Integer.class));
-                    return map;
-                }));
-    }
-
-    public Map<String, Integer> lastMessagesWritten() {
-        return jdbi.withHandle(handle -> handle.createQuery("SELECT closer, COUNT(*) as c FROM tickets WHERE isOpen = false AND closer != '' GROUP BY closer ORDER BY c DESC LIMIT :limit")
-                .bind("limit", limit)
-                .bind("limit", daysBack) //TODO: Current date - days to set the date limit
-                .reduceRows(new LinkedHashMap<>(), (map, row) -> {
-                    map.put(row.getColumn("closer", String.class), row.getColumn("c", Integer.class));
+                    map.put(row.getColumn("supporter", String.class), row.getColumn("c", Integer.class));
                     return map;
                 }));
     }
