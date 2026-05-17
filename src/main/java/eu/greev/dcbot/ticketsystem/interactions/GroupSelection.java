@@ -30,6 +30,13 @@ public class GroupSelection implements Interaction {
             buttons.add(button);
         }
 
+        if (buttons.isEmpty()) {
+            event.reply("No categories are available in this group.")
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
+
         event.reply("**" + group.getLabel() + "** — choose a category:")
                 .addActionRow(buttons)
                 .setEphemeral(true)
