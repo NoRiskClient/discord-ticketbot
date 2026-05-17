@@ -16,7 +16,7 @@ public class Dev implements ICategory {
 
     @Override
     public String getLabel() {
-        return "Dev";
+        return "Developer";
     }
 
     @Override
