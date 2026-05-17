@@ -166,6 +166,7 @@ public class Main {
                         .addOption(OptionType.CHANNEL, "unclaimed-category", "The category where the tickets should create", true)
                         .addOption(OptionType.ROLE, "staff", "The role which is the team role", true)
                         .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false))
+                .addSubcommands(new SubcommandData("resend-menu", "Repost the ticket menu in the base channel"))
                 .addSubcommands(new SubcommandData("set-claim-emoji", "Set your personal claim emoji")
                         .addOption(OptionType.STRING, "emoji", "The emoji you want to set", true))
                 .addSubcommands(new SubcommandData("list-claim-emojis", "List all claim emojis"))
@@ -207,6 +208,7 @@ public class Main {
         registerInteraction("ticket-confirm-message", new TicketConfirmMessage());
         registerInteraction("ticket-confirm-message-modal", new TicketConfirmMessageModal(ticketService));
         registerInteraction("setup", new Setup(config, ticketService, missingPerm, jda));
+        registerInteraction("resend-menu", new ResendMenu(config, ticketService, missingPerm, jda));
         registerInteraction("info", new LoadTicket(config, ticketService, missingPerm, jda));
         registerInteraction("get-tickets", new GetTickets(config, ticketService, missingPerm, jda));
         registerInteraction("stats", new Stats(config, ticketService, missingPerm, jda));
