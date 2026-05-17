@@ -72,4 +72,9 @@ public class Helper implements ICategory {
     public boolean isSensitive() {
         return true;
     }
+
+    @Override
+    public boolean isApplication() {
+        return true;
+    }
 }

@@ -1,5 +1,6 @@
 package eu.greev.dcbot;
 
+import eu.greev.dcbot.scheduler.ConfigReloadScheduler;
 import eu.greev.dcbot.scheduler.DailyScheduler;
 import eu.greev.dcbot.scheduler.HourlyScheduler;
 import eu.greev.dcbot.scheduler.RatingStatsScheduler;
@@ -189,6 +190,7 @@ public class Main {
                 })
         );
 
+        new ConfigReloadScheduler(config).start();
         new HourlyScheduler(config, ticketService, ticketData, jda, xpService).start();
         new DailyScheduler(config, jda, ticketData, ticketService).start();
         ratingStatsScheduler = new RatingStatsScheduler(config, ratingData, ticketData, jda, supporterSettingsData);

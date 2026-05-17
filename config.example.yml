@@ -74,6 +74,14 @@ categoryRoles:
   security:
     - 123456789012345678
 
+# Which staff applications are open (helper/designer/dev).
+# true = button enabled, false/missing = disabled (greyed out).
+# Re-checked from this file every 5 minutes (no restart needed).
+applicationsOpen:
+  helper: true
+  designer: false
+  dev: true
+
 # XP System Integration (optional - leave empty to disable)
 # Backend API URL for awarding XP to helpers
 xpApiUrl: ""

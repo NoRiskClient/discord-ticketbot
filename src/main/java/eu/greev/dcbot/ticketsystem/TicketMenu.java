@@ -50,6 +50,10 @@ public final class TicketMenu {
      *         otherwise → enabled only if the member has that role.
      */
     public static boolean isEnabled(ICategory category, Member member, Config config) {
+        if (category.isApplication()
+                && !Boolean.TRUE.equals(config.getApplicationsOpen().get(category.getId()))) {
+            return false;
+        }
         Long required = category.getRequiredRoleId(config);
         if (required == null) {
             return true;

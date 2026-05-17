@@ -31,4 +31,14 @@ public interface ICategory {
     default Long getRequiredRoleId(Config config) {
         return null;
     }
+
+    /**
+     * Whether this category is an application gated by the {@code applicationsOpen}
+     * config map. When true, it is only enabled if
+     * {@code config.getApplicationsOpen().get(getId())} is {@code TRUE};
+     * a missing or {@code false} entry disables it (like a closed application).
+     */
+    default boolean isApplication() {
+        return false;
+    }
 }

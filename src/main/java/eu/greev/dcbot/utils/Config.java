@@ -39,6 +39,7 @@ public class Config {
     private Map<Long, String> claimEmojis = new HashMap<>();
     private Map<String, Long> categories = new HashMap<>();
     private Map<String, List<Long>> categoryRoles = new HashMap<>();
+    private Map<String, Boolean> applicationsOpen = new HashMap<>();
 
     // XP System Integration
     private String xpApiUrl = "";

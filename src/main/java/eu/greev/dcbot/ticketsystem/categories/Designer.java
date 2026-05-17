@@ -73,4 +73,9 @@ public class Designer implements ICategory {
     public boolean isSensitive() {
         return true;
     }
+
+    @Override
+    public boolean isApplication() {
+        return true;
+    }
 }
