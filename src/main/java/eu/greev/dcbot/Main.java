@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
     public static final List<ICategory> CATEGORIES = new ArrayList<>();
+    public static final List<TicketGroup> GROUPS = new ArrayList<>();
     public static final Map<ICategory, List<Category>> OVERFLOW_CHANNEL_CATEGORIES = new HashMap<>();
     public static final List<Category> OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES = new ArrayList<>();
     public static final List<Category> OVERFLOW_PENDING_RATING_CATEGORIES = new ArrayList<>();
