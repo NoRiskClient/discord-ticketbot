@@ -39,7 +39,7 @@ public class Designer implements ICategory {
                 .build();
 
         TextInput tools = TextInput.create("tools", "Tools/Software", TextInputStyle.SHORT)
-                .setPlaceholder("e.g. Photoshop, Blender, Figma")
+                .setPlaceholder("e.g. Blockbench, Photoshop, Figma")
                 .setRequired(true)
                 .setMaxLength(50)
                 .build();
