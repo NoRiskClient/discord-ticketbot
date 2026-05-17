@@ -35,10 +35,12 @@ public final class TicketMenu {
             groupButtons.add(Button.primary("group-" + group.getId(), group.getLabel()));
         }
 
-        return new MessageCreateBuilder()
-                .addEmbeds(builder.build())
-                .addActionRow(groupButtons)
-                .build();
+        MessageCreateBuilder messageBuilder = new MessageCreateBuilder()
+                .addEmbeds(builder.build());
+        if (!groupButtons.isEmpty()) {
+            messageBuilder.addActionRow(groupButtons);
+        }
+        return messageBuilder.build();
     }
 
     /**
