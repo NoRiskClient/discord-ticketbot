@@ -21,7 +21,7 @@ public class Helper implements ICategory {
 
     @Override
     public String getDescription() {
-        return "Apply to become a Helper";
+        return "Support our community and help players every day";
     }
 
     @Override

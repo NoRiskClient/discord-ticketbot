@@ -21,7 +21,7 @@ public class Dev implements ICategory {
 
     @Override
     public String getDescription() {
-        return "Apply to become a Developer";
+        return "Build features and shape the project with your code";
     }
 
     @Override

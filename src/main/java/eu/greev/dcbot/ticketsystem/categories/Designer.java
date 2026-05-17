@@ -21,7 +21,7 @@ public class Designer implements ICategory {
 
     @Override
     public String getDescription() {
-        return "Apply to become a Designer";
+        return "Shape our visuals — banners, builds & creative work";
     }
 
     @Override
