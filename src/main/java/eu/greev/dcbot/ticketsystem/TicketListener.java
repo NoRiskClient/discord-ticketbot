@@ -1,7 +1,6 @@
 package eu.greev.dcbot.ticketsystem;
 
 import eu.greev.dcbot.Main;
-import eu.greev.dcbot.ticketsystem.TicketMenu;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
 import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.interactions.TicketClose;

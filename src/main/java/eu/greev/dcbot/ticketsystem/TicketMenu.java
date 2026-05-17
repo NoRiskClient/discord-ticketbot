@@ -60,6 +60,6 @@ public final class TicketMenu {
         if (member == null) {
             return false;
         }
-        return member.getRoles().stream().map(Role::getIdLong).anyMatch(id -> id == required);
+        return member.getRoles().stream().mapToLong(Role::getIdLong).anyMatch(id -> id == required);
     }
 }
