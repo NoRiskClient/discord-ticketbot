@@ -135,7 +135,7 @@ public class Main {
         GROUPS.add(new TicketGroup("general", "General", List.of(general, report, payment)));
         GROUPS.add(new TicketGroup("problems", "Problems", List.of(bug, crashReport, security)));
         GROUPS.add(new TicketGroup("creator", "Creator", List.of(creator, creatorGeneral)));
-        GROUPS.add(new TicketGroup("staffapp", "Staff App.", List.of(helper, designer, dev)));
+        GROUPS.add(new TicketGroup("staffapp", "Staff Application", List.of(helper, designer, dev)));
 
         for (TicketGroup group : GROUPS) {
             registerInteraction("group-" + group.getId(), new GroupSelection(group, config));
