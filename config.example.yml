@@ -30,6 +30,9 @@ specialStatsChannel: 0
 # Category ID where tickets pending rating are moved (0 = disabled)
 pendingRatingCategory: 0
 
+# Role ID required to open the "Creator General" category (0 = disabled for everyone)
+creatorRole: 0
+
 # Server branding (set automatically from guild info)
 serverName: "My Server"
 serverLogo: "https://example.com/logo.png"

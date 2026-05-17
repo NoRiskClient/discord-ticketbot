@@ -28,6 +28,7 @@ public class Config {
     private int ratingReminderIntervalHours = 24;
     private int ratingMaxReminders = 3;
     private long pendingRatingCategory = 0;
+    private long creatorRole = 0;
     private String serverLogo;
     private String serverName;
     private String color;
