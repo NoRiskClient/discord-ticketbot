@@ -34,7 +34,8 @@ public class GroupSelection implements Interaction {
             buttons.add(button);
 
             description.append(enabled ? "🎫 " : "🔒 ")
-                    .append("**").append(category.getLabel()).append("**\n")
+                    .append("**").append(category.getLabel()).append("**")
+                    .append(enabled ? "" : " `(Closed)`").append("\n")
                     .append("> ").append(category.getDescription()).append("\n\n");
         }
 
