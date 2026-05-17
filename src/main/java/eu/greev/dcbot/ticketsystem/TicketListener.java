@@ -155,7 +155,14 @@ public class TicketListener extends ListenerAdapter {
             return;
         }
 
-        Main.INTERACTIONS.get(modalId).execute(event);
+        Interaction interaction = Main.INTERACTIONS.get(modalId);
+        if (interaction == null) {
+            event.reply("This form is unknown or expired. Please use the menu again.")
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
+        interaction.execute(event);
     }
 
     @Override
