@@ -21,7 +21,7 @@ public class Designer implements ICategory {
 
     @Override
     public String getDescription() {
-        return "Shape our visuals — banners, builds & creative work";
+        return "Shape our visuals: cosmetics, emotes & banners";
     }
 
     @Override

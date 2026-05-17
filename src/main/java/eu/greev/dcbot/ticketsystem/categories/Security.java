@@ -21,7 +21,7 @@ public class Security implements ICategory {
 
     @Override
     public String getDescription() {
-        return "Here you can report security vulnerabilities";
+        return "Report a security vulnerability";
     }
 
     @Override

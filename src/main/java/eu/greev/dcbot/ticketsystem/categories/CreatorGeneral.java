@@ -22,7 +22,7 @@ public class CreatorGeneral implements ICategory {
 
     @Override
     public String getDescription() {
-        return "General creator questions — incl. event requests & more";
+        return "General creator questions, incl. event requests & more";
     }
 
     @Override
