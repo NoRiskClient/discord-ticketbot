@@ -1,8 +1,8 @@
 package eu.greev.dcbot.ticketsystem;
 
 import eu.greev.dcbot.Main;
-import eu.greev.dcbot.ticketsystem.categories.ICategory;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.interactions.Interaction;
 import eu.greev.dcbot.ticketsystem.interactions.TicketClose;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.ticketsystem.service.XpService;
@@ -13,7 +13,6 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
@@ -26,14 +25,12 @@ import net.dv8tion.jda.api.events.guild.update.GuildUpdateIconEvent;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import org.jetbrains.annotations.NotNull;
 
@@ -138,7 +135,14 @@ public class TicketListener extends ListenerAdapter {
             return;
         }
 
-        Main.INTERACTIONS.get(buttonId).execute(event);
+        Interaction interaction = Main.INTERACTIONS.get(buttonId);
+        if (interaction == null) {
+            event.reply("This button is unknown or expired. Please use the menu again.")
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
+        interaction.execute(event);
     }
 
     @Override
@@ -150,14 +154,14 @@ public class TicketListener extends ListenerAdapter {
             return;
         }
 
-        Main.INTERACTIONS.get(modalId).execute(event);
-    }
-
-    @Override
-    public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        if (event.getSelectMenu().getId() == null || !event.getSelectMenu().getId().equals("ticket-create-topic"))
+        Interaction interaction = Main.INTERACTIONS.get(modalId);
+        if (interaction == null) {
+            event.reply("This form is unknown or expired. Please use the menu again.")
+                    .setEphemeral(true)
+                    .queue();
             return;
-        Main.INTERACTIONS.get(event.getSelectedOptions().get(0).getValue()).execute(event);
+        }
+        interaction.execute(event);
     }
 
     @Override
@@ -284,23 +288,8 @@ public class TicketListener extends ListenerAdapter {
                     .takeAsync(1000)
                     .get()
                     .forEach(m -> m.delete().complete());
-            EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
-                    .setColor(Color.decode(config.getColor()))
-                    .addField(new MessageEmbed.Field("**Support request**", """
-                            You have questions or a problem?
-                            Just click the one of the buttons below.
-                            We will try to handle your ticket as soon as possible.
-                            """, false));
-
-            StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
-                    .setPlaceholder("Select your ticket topic");
-
-            for (ICategory category : Main.CATEGORIES) {
-                selectionBuilder.addOption(category.getLabel(), "select-" + category.getId(), category.getDescription());
-            }
-
-            event.getGuild().getTextChannelById(config.getBaseChannel()).sendMessageEmbeds(builder.build())
-                    .setActionRow(selectionBuilder.build())
+            event.getGuild().getTextChannelById(config.getBaseChannel())
+                    .sendMessage(TicketMenu.buildBaseMessage(config))
                     .complete();
         } catch (InterruptedException | ExecutionException | ErrorResponseException e) {
             log.error("An error occurred while handling message history", e);

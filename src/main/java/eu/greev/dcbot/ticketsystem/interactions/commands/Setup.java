@@ -1,7 +1,6 @@
 package eu.greev.dcbot.ticketsystem.interactions.commands;
 
-import eu.greev.dcbot.Main;
-import eu.greev.dcbot.ticketsystem.categories.ICategory;
+import eu.greev.dcbot.ticketsystem.TicketMenu;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.extern.slf4j.Slf4j;
@@ -9,14 +8,11 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
-
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
@@ -99,24 +95,7 @@ public class Setup extends AbstractCommand {
             log.error("Could not delete messages", e);
         }
 
-        EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
-                .setColor(color)
-                .addField(new MessageEmbed.Field("**Support request**", """
-                        You have questions or a problem?
-                        Just click the one of the buttons below.
-                        We will try to handle your ticket as soon as possible.
-                        """, false));
-
-        StringSelectMenu.Builder selectionBuilder = StringSelectMenu.create("ticket-create-topic")
-                .setPlaceholder("Select your ticket topic");
-
-        for (ICategory category : Main.CATEGORIES) {
-            selectionBuilder.addOption(category.getLabel(), "select-" + category.getId(), category.getDescription());
-        }
-
-        baseChannel.sendMessageEmbeds(builder.build())
-                .setActionRow(selectionBuilder.build())
-                .queue();
+        baseChannel.sendMessage(TicketMenu.buildBaseMessage(config)).queue();
 
         EmbedBuilder builder1 = new EmbedBuilder().setFooter(serverName, serverLogo)
                 .setColor(color)

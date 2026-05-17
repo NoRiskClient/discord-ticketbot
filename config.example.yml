@@ -30,6 +30,9 @@ specialStatsChannel: 0
 # Category ID where tickets pending rating are moved (0 = disabled)
 pendingRatingCategory: 0
 
+# Role ID required to open the "Creator General" category (0 = disabled for everyone)
+creatorRole: 0
+
 # Server branding (set automatically from guild info)
 serverName: "My Server"
 serverLogo: "https://example.com/logo.png"
@@ -70,6 +73,14 @@ categoryRoles:
     - 123456789012345678
   security:
     - 123456789012345678
+
+# Which staff applications are open (helper/designer/dev).
+# true = button enabled, false/missing = disabled (greyed out).
+# Re-checked from this file every 5 minutes (no restart needed).
+applicationsOpen:
+  helper: true
+  designer: false
+  dev: true
 
 # XP System Integration (optional - leave empty to disable)
 # Backend API URL for awarding XP to helpers

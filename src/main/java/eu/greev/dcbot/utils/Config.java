@@ -28,6 +28,7 @@ public class Config {
     private int ratingReminderIntervalHours = 24;
     private int ratingMaxReminders = 3;
     private long pendingRatingCategory = 0;
+    private long creatorRole = 0;
     private String serverLogo;
     private String serverName;
     private String color;
@@ -38,6 +39,7 @@ public class Config {
     private Map<Long, String> claimEmojis = new HashMap<>();
     private Map<String, Long> categories = new HashMap<>();
     private Map<String, List<Long>> categoryRoles = new HashMap<>();
+    private Map<String, Boolean> applicationsOpen = new HashMap<>();
 
     // XP System Integration
     private String xpApiUrl = "";
