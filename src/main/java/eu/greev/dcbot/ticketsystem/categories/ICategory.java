@@ -25,6 +25,8 @@ public interface ICategory {
      * Role id required to open this category.
      * {@code null} = no gate. A non-null value (including 0) means gated;
      * 0 is treated as "disabled for everyone" by {@code TicketMenu.isEnabled}.
+     *
+     * @param config server configuration; overriding implementations may resolve a configured role id from it
      */
     default Long getRequiredRoleId(Config config) {
         return null;
