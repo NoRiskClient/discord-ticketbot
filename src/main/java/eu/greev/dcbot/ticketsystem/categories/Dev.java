@@ -32,8 +32,8 @@ public class Dev implements ICategory {
                 .setMaxLength(16)
                 .build();
 
-        TextInput tech = TextInput.create("tech", "Languages/Tech", TextInputStyle.SHORT)
-                .setPlaceholder("e.g. Java, Kotlin, TypeScript")
+        TextInput tech = TextInput.create("tech", "Tech Stack", TextInputStyle.SHORT)
+                .setPlaceholder("e.g. Java, Spring, PostgreSQL, React")
                 .setRequired(true)
                 .setMaxLength(50)
                 .build();
@@ -62,7 +62,7 @@ public class Dev implements ICategory {
     public Map<String, String> getInfo(ModalInteractionEvent event) {
         Map<String, String> map = new LinkedHashMap<>();
         map.put("In-Game Name", event.getValue("name").getAsString());
-        map.put("Languages/Tech", event.getValue("tech").getAsString());
+        map.put("Tech Stack", event.getValue("tech").getAsString());
         map.put("Experience", event.getValue("experience").getAsString());
         map.put("Code samples / GitHub", event.getValue("samples") != null && !event.getValue("samples").getAsString().isEmpty()
                 ? event.getValue("samples").getAsString() : "N/A");
