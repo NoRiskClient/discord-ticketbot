@@ -33,7 +33,7 @@ public class Dev implements ICategory {
                 .build();
 
         TextInput tech = TextInput.create("tech", "Tech Stack", TextInputStyle.SHORT)
-                .setPlaceholder("e.g. Java, Spring, PostgreSQL, React")
+                .setPlaceholder("e.g. Kotlin, Fabric, Ktor, MongoDB")
                 .setRequired(true)
                 .setMaxLength(50)
                 .build();
