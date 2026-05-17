@@ -108,13 +108,38 @@ public class Main {
         XpService xpService = new XpService(config, supporterSettingsData);
         jda.addEventListener(new TicketListener(ticketService, config, jda, xpService));
 
-        registerCategory(new General(), config, ticketService, ticketData);
-        registerCategory(new Report(), config, ticketService, ticketData);
-        registerCategory(new Creator(), config, ticketService, ticketData);
-        registerCategory(new Bug(), config, ticketService, ticketData);
-        registerCategory(new CrashReport(), config, ticketService, ticketData);
-        registerCategory(new Payment(), config, ticketService, ticketData);
-        registerCategory(new Security(), config, ticketService, ticketData);
+        General general = new General();
+        Report report = new Report();
+        Payment payment = new Payment();
+        Bug bug = new Bug();
+        CrashReport crashReport = new CrashReport();
+        Security security = new Security();
+        Creator creator = new Creator();
+        CreatorGeneral creatorGeneral = new CreatorGeneral();
+        Helper helper = new Helper();
+        Designer designer = new Designer();
+        Dev dev = new Dev();
+
+        registerCategory(general, config, ticketService, ticketData);
+        registerCategory(report, config, ticketService, ticketData);
+        registerCategory(payment, config, ticketService, ticketData);
+        registerCategory(bug, config, ticketService, ticketData);
+        registerCategory(crashReport, config, ticketService, ticketData);
+        registerCategory(security, config, ticketService, ticketData);
+        registerCategory(creator, config, ticketService, ticketData);
+        registerCategory(creatorGeneral, config, ticketService, ticketData);
+        registerCategory(helper, config, ticketService, ticketData);
+        registerCategory(designer, config, ticketService, ticketData);
+        registerCategory(dev, config, ticketService, ticketData);
+
+        GROUPS.add(new TicketGroup("general", "General", List.of(general, report, payment)));
+        GROUPS.add(new TicketGroup("problems", "Problems", List.of(bug, crashReport, security)));
+        GROUPS.add(new TicketGroup("creator", "Creator", List.of(creator, creatorGeneral)));
+        GROUPS.add(new TicketGroup("staffapp", "Staff App.", List.of(helper, designer, dev)));
+
+        for (TicketGroup group : GROUPS) {
+            registerInteraction("group-" + group.getId(), new GroupSelection(group, config));
+        }
 
         ticketService.loadOverflowCategories();
 
@@ -281,7 +306,7 @@ public class Main {
     }
 
     private static void registerCategory(ICategory category, Config config, TicketService ticketService, TicketData ticketData) {
-        registerInteraction("select-" + category.getId(), new CategorySelection(category));
+        registerInteraction("select-" + category.getId(), new CategorySelection(category, config));
         registerInteraction(category.getId(), new TicketModal(category, config, ticketService, ticketData));
         OVERFLOW_CHANNEL_CATEGORIES.put(category, new ArrayList<>());
         CATEGORIES.add(category);
