@@ -22,13 +22,13 @@ public class CreatorGeneral implements ICategory {
 
     @Override
     public String getDescription() {
-        return "General questions for creators";
+        return "General creator questions — incl. event requests & more";
     }
 
     @Override
     public Modal getModal() {
         TextInput message = TextInput.create("message", "Message", TextInputStyle.PARAGRAPH)
-                .setPlaceholder("Describe your request or question in detail.")
+                .setPlaceholder("Your question, event request, or other creator concern — in detail.")
                 .setRequired(true)
                 .setMaxLength(700)
                 .build();
