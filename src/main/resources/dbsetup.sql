@@ -99,6 +99,11 @@ CREATE TABLE IF NOT EXISTS ratings
 
     FOREIGN KEY (ticketID) REFERENCES tickets (ticketID)
 );
+CREATE TABLE IF NOT EXISTS supporter_categories
+(
+    categoryID  VARCHAR PRIMARY KEY NOT NULL,
+    supporterID VARCHAR             NOT NULL
+);
 CREATE TABLE IF NOT EXISTS supporter_settings
 (
     discordId VARCHAR PRIMARY KEY NOT NULL,
