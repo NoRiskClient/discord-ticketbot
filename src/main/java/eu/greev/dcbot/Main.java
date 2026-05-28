@@ -56,6 +56,7 @@ public class Main {
     public static final Map<ICategory, List<Category>> OVERFLOW_CHANNEL_CATEGORIES = new HashMap<>();
     public static final List<Category> OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES = new ArrayList<>();
     public static final List<Category> OVERFLOW_PENDING_RATING_CATEGORIES = new ArrayList<>();
+    public static final Map<Long, Category> SUPPORTER_CATEGORIES = new HashMap<>();
     @Getter
     private static String createCommandId;
     @Getter

@@ -283,36 +283,44 @@ public class TicketService {
         saveTranscriptChanges(ticket.getTranscript().getRecentChanges());
 
         Category parentCategory = ticket.getTextChannel().getParentCategory();
-        if (parentCategory != null && parentCategory.getChannels().size() <= 1) {
+
+        ticket.getTextChannel().delete().queue(v -> {
+            if (parentCategory == null || parentCategory.getChannels().size() > 0) return;
+
             if (Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.contains(parentCategory)) {
                 Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(parentCategory);
-                parentCategory.delete().queue();
                 jdbi.useHandle(handle ->
                         handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
                                 .bind(0, parentCategory.getId())
                                 .execute()
                 );
-            } else if (Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticket.getCategory()).contains(parentCategory)) {
-                Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticket.getCategory()).remove(parentCategory);
                 parentCategory.delete().queue();
-                jdbi.useHandle(handle ->
-                        handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                                .bind(0, parentCategory.getId())
-                                .execute()
-                );
             } else if (Main.OVERFLOW_PENDING_RATING_CATEGORIES.contains(parentCategory)) {
                 Main.OVERFLOW_PENDING_RATING_CATEGORIES.remove(parentCategory);
-                parentCategory.delete().queue();
                 jdbi.useHandle(handle ->
                         handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
                                 .bind(0, parentCategory.getId())
                                 .execute()
                 );
+                parentCategory.delete().queue();
+            } else {
+                // Check if it's a supporter category and delete if now empty
+                Long supporterIdForCategory = Main.SUPPORTER_CATEGORIES.entrySet().stream()
+                        .filter(e -> e.getValue().equals(parentCategory))
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .orElse(null);
+                if (supporterIdForCategory != null) {
+                    Main.SUPPORTER_CATEGORIES.remove(supporterIdForCategory);
+                    jdbi.useHandle(handle ->
+                            handle.createUpdate("DELETE FROM supporter_categories WHERE categoryID = ?")
+                                    .bind(0, parentCategory.getId())
+                                    .execute()
+                    );
+                    parentCategory.delete().queue();
+                }
             }
-        }
-
-
-        ticket.getTextChannel().delete().queue();
+        });
     }
 
     public boolean claim(Ticket ticket, User supporter) {
@@ -334,38 +342,13 @@ public class TicketService {
 
         Guild guild = jda.getGuildById(config.getServerId());
 
-        if (config.getCategories().get(ticket.getCategory().getId()) != null) {
-            List<Category> dynamicCategories = Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticket.getCategory());
-            Category defaultCategory = guild.getCategoryById(config.getCategories().get(ticket.getCategory().getId()));
-            Category channelCategory = defaultCategory.getChannels().size() >= 50 ?
-                    dynamicCategories
-                            .stream()
-                            .filter(c -> c.getChannels().size() < 50)
-                            .findFirst()
-                            .orElseGet(() -> createDynamicCategory(defaultCategory, ticket, dynamicCategories)) : defaultCategory;
-
-            ticket.getTextChannel().getManager().setParent(channelCategory).delay(500, TimeUnit.MILLISECONDS).queue(
-                    success -> guild.modifyTextChannelPositions(jda.getCategoryById(config.getCategories().get(ticket.getCategory().getId())))
-                            .sortOrder(
-                                    getChannelComparator()
-                            ).queue(),
-                    error -> {
-                        if (error.getMessage().contains("CHANNEL_PARENT_MAX_CHANNELS")) {
-                            EmbedBuilder embedBuilder = new EmbedBuilder()
-                                    .setColor(Color.YELLOW)
-                                    .setDescription("❗**The channel category for this ticket category is full! Please try to close some tickets.**");
-                            ticket.getThreadChannel().sendMessageEmbeds(embedBuilder.build()).queue();
-                        } else {
-                            log.error("Couldn't move ticket channel to category!", error);
-                        }
-                    }
-            );
-        } else {
-            EmbedBuilder error = new EmbedBuilder()
-                    .setColor(Color.YELLOW)
-                    .setDescription("❗**Category %s doesn't have a channel category assigned, please tell an Admin to add it to the config!**".formatted(ticket.getCategory().getId()));
-            ticket.getTextChannel().sendMessageEmbeds(error.build()).queue();
-        }
+        Category supporterCategory = getOrCreateSupporterCategory(guild, supporter);
+        ticket.getTextChannel().getManager().setParent(supporterCategory).delay(500, TimeUnit.MILLISECONDS).queue(
+                success -> supporterCategory.modifyTextChannelPositions()
+                        .sortOrder(getChannelComparator())
+                        .queue(),
+                error -> log.error("Couldn't move ticket channel to supporter category!", error)
+        );
 
         if (config.getCategoryRoles().get(ticket.getCategory().getId()) != null) {
             for (Long id : config.getCategoryRoles().get(ticket.getCategory().getId())) {
@@ -445,8 +428,57 @@ public class TicketService {
                     return null;
                 })
                 .list());
+
+        // Load supporter categories
+        jdbi.useHandle(handle -> handle.createQuery("SELECT categoryID, supporterID FROM supporter_categories")
+                .map((resultSet, index, ctx) -> {
+                    String categoryIdStr = resultSet.getString("categoryID");
+                    String supporterIdStr = resultSet.getString("supporterID");
+                    log.info("Found supporter category: {} for supporter {}", categoryIdStr, supporterIdStr);
+
+                    Category category = guild.getCategoryById(categoryIdStr);
+                    if (category != null) {
+                        Main.SUPPORTER_CATEGORIES.put(Long.parseLong(supporterIdStr), category);
+                    } else {
+                        handle.createUpdate("DELETE FROM supporter_categories WHERE categoryID = ?")
+                                .bind(0, categoryIdStr)
+                                .execute();
+                    }
+
+                    return null;
+                })
+                .list());
     }
 
+
+    private Category getOrCreateSupporterCategory(Guild guild, User supporter) {
+        Category existing = Main.SUPPORTER_CATEGORIES.get(supporter.getIdLong());
+        if (existing != null) {
+            return existing;
+        }
+
+        String categoryName = "🎫 " + supporter.getName();
+        Category newCategory = guild.createCategory(categoryName).complete();
+
+        // Position it below the unclaimed category
+        Category unclaimedCategory = guild.getCategoryById(config.getUnclaimedCategory());
+        if (unclaimedCategory != null) {
+            guild.modifyCategoryPositions()
+                    .selectPosition(newCategory)
+                    .moveBelow(unclaimedCategory)
+                    .queue();
+        }
+
+        Main.SUPPORTER_CATEGORIES.put(supporter.getIdLong(), newCategory);
+        jdbi.useHandle(handle ->
+                handle.createUpdate("INSERT INTO supporter_categories (categoryID, supporterID) VALUES (?, ?)")
+                        .bind(0, newCategory.getId())
+                        .bind(1, String.valueOf(supporter.getIdLong()))
+                        .execute()
+        );
+
+        return newCategory;
+    }
 
     private Category createDynamicCategory(Category defaultCategory, Ticket ticket, List<Category> dynamicCategories) {
         Guild guild = jda.getGuildById(config.getServerId());
