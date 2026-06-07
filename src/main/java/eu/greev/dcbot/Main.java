@@ -1,5 +1,6 @@
 package eu.greev.dcbot;
 
+import eu.greev.dcbot.scheduler.ConfigReloadScheduler;
 import eu.greev.dcbot.scheduler.DailyScheduler;
 import eu.greev.dcbot.scheduler.HourlyScheduler;
 import eu.greev.dcbot.scheduler.RatingStatsScheduler;
@@ -53,6 +54,7 @@ import java.util.stream.Collectors;
 public class Main {
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
     public static final List<ICategory> CATEGORIES = new ArrayList<>();
+    public static final List<TicketGroup> GROUPS = new ArrayList<>();
     public static final Map<ICategory, List<Category>> OVERFLOW_CHANNEL_CATEGORIES = new HashMap<>();
     public static final List<Category> OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES = new ArrayList<>();
     public static final List<Category> OVERFLOW_PENDING_RATING_CATEGORIES = new ArrayList<>();
@@ -107,13 +109,38 @@ public class Main {
         XpService xpService = new XpService(config, supporterSettingsData);
         jda.addEventListener(new TicketListener(ticketService, config, jda, xpService));
 
-        registerCategory(new General(), config, ticketService, ticketData);
-        registerCategory(new Report(), config, ticketService, ticketData);
-        registerCategory(new Creator(), config, ticketService, ticketData);
-        registerCategory(new Bug(), config, ticketService, ticketData);
-        registerCategory(new CrashReport(), config, ticketService, ticketData);
-        registerCategory(new Payment(), config, ticketService, ticketData);
-        registerCategory(new Security(), config, ticketService, ticketData);
+        General general = new General();
+        Report report = new Report();
+        Payment payment = new Payment();
+        Bug bug = new Bug();
+        CrashReport crashReport = new CrashReport();
+        Security security = new Security();
+        Creator creator = new Creator();
+        CreatorGeneral creatorGeneral = new CreatorGeneral();
+        Helper helper = new Helper();
+        Designer designer = new Designer();
+        Dev dev = new Dev();
+
+        registerCategory(general, config, ticketService, ticketData);
+        registerCategory(report, config, ticketService, ticketData);
+        registerCategory(payment, config, ticketService, ticketData);
+        registerCategory(bug, config, ticketService, ticketData);
+        registerCategory(crashReport, config, ticketService, ticketData);
+        registerCategory(security, config, ticketService, ticketData);
+        registerCategory(creator, config, ticketService, ticketData);
+        registerCategory(creatorGeneral, config, ticketService, ticketData);
+        registerCategory(helper, config, ticketService, ticketData);
+        registerCategory(designer, config, ticketService, ticketData);
+        registerCategory(dev, config, ticketService, ticketData);
+
+        GROUPS.add(new TicketGroup("general", "General", List.of(general, report, payment)));
+        GROUPS.add(new TicketGroup("problems", "Problems", List.of(bug, crashReport, security)));
+        GROUPS.add(new TicketGroup("creator", "Creator", List.of(creator, creatorGeneral)));
+        GROUPS.add(new TicketGroup("staffapp", "Staff Application", List.of(helper, designer, dev)));
+
+        for (TicketGroup group : GROUPS) {
+            registerInteraction("group-" + group.getId(), new GroupSelection(group, config));
+        }
 
         ticketService.loadOverflowCategories();
 
@@ -140,6 +167,7 @@ public class Main {
                         .addOption(OptionType.CHANNEL, "unclaimed-category", "The category where the tickets should create", true)
                         .addOption(OptionType.ROLE, "staff", "The role which is the team role", true)
                         .addOption(OptionType.STRING, "color", "The color of the ticket embeds (HEX-Code)", false))
+                .addSubcommands(new SubcommandData("resend-menu", "Repost the ticket menu in the base channel"))
                 .addSubcommands(new SubcommandData("set-claim-emoji", "Set your personal claim emoji")
                         .addOption(OptionType.STRING, "emoji", "The emoji you want to set", true))
                 .addSubcommands(new SubcommandData("list-claim-emojis", "List all claim emojis"))
@@ -162,6 +190,7 @@ public class Main {
                 })
         );
 
+        new ConfigReloadScheduler(config).start();
         new HourlyScheduler(config, ticketService, ticketData, jda, xpService).start();
         new DailyScheduler(config, jda, ticketData, ticketService).start();
         ratingStatsScheduler = new RatingStatsScheduler(config, ratingData, ticketData, jda, supporterSettingsData);
@@ -181,6 +210,7 @@ public class Main {
         registerInteraction("ticket-confirm-message", new TicketConfirmMessage());
         registerInteraction("ticket-confirm-message-modal", new TicketConfirmMessageModal(ticketService));
         registerInteraction("setup", new Setup(config, ticketService, missingPerm, jda));
+        registerInteraction("resend-menu", new ResendMenu(config, ticketService, missingPerm, jda));
         registerInteraction("info", new LoadTicket(config, ticketService, missingPerm, jda));
         registerInteraction("get-tickets", new GetTickets(config, ticketService, missingPerm, jda));
         registerInteraction("stats", new Stats(config, ticketService, missingPerm, jda));
@@ -280,7 +310,7 @@ public class Main {
     }
 
     private static void registerCategory(ICategory category, Config config, TicketService ticketService, TicketData ticketData) {
-        registerInteraction("select-" + category.getId(), new CategorySelection(category));
+        registerInteraction("select-" + category.getId(), new CategorySelection(category, config));
         registerInteraction(category.getId(), new TicketModal(category, config, ticketService, ticketData));
         OVERFLOW_CHANNEL_CATEGORIES.put(category, new ArrayList<>());
         CATEGORIES.add(category);
