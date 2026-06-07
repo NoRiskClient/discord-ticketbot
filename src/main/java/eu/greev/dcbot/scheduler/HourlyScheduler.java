@@ -111,7 +111,9 @@ public class HourlyScheduler {
                             .queue();
                 }
 
-                ticket.getThreadChannel().sendMessageEmbeds(threadMessageBuilder.build()).queue();
+                if (ticket.getThreadChannel() != null) {
+                    ticket.getThreadChannel().sendMessageEmbeds(threadMessageBuilder.build()).queue();
+                }
 
                 ticket.setRemindersSent(ticket.getRemindersSent() + 1);
                 userReminders++;
