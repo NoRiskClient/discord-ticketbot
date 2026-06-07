@@ -125,7 +125,20 @@ public class TicketService {
                 return Optional.of("An error occurred while creating the ticket channel: " + e.getMessage());
             }
         }
-        ThreadChannel thread = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
+        // Reuse a hardcoded placeholder thread instead of creating one per ticket.
+        // Guild active-thread limit (error 160006) makes per-ticket threads unreliable.
+        ThreadChannel resolvedThread = null;
+        if (config.getPlaceholderThreadId() != 0) {
+            resolvedThread = jda.getThreadChannelById(config.getPlaceholderThreadId());
+            if (resolvedThread == null) {
+                log.warn("Placeholder thread {} not found, falling back to creating a new thread for ticket #{}",
+                        config.getPlaceholderThreadId(), ticket.getId());
+            }
+        }
+        if (resolvedThread == null) {
+            resolvedThread = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
+        }
+        final ThreadChannel thread = resolvedThread;
 
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.decode(config.getColor()))
                 .setDescription("Hello there, " + owner.getAsMention() + "! " + """
