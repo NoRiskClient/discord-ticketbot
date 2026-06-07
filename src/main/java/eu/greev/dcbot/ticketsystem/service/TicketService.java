@@ -582,7 +582,7 @@ public class TicketService {
     public Ticket getTicketByChannelId(long idLong) {
         Optional<Ticket> optionalTicket = allCurrentTickets.stream()
                 .filter(ticket -> ticket.getTextChannel() != null)
-                .filter(ticket -> ticket.getTextChannel().getIdLong() == idLong)
+                .filter(ticket -> ticket.getTextChannel().getIdLong() == idLong || ticket.getThreadChannel().getIdLong() == idLong)
                 .findAny();
 
         return optionalTicket.orElseGet(() -> {
