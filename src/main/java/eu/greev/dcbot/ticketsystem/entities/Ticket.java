@@ -42,6 +42,7 @@ public class Ticket {
     @Getter private Instant pendingRatingSince;
     @Getter private int ratingRemindersSent;
     @Getter private Long lastSupporterMessageAt;
+    @Getter private Long createdAt;
     private final TicketData ticketData;
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(10);
 
@@ -169,6 +170,12 @@ public class Ticket {
 
     public Ticket setLastSupporterMessageAt(Long lastSupporterMessageAt) {
         this.lastSupporterMessageAt = lastSupporterMessageAt;
+        this.save();
+        return this;
+    }
+
+    public Ticket setCreatedAt(Long createdAt) {
+        this.createdAt = createdAt;
         this.save();
         return this;
     }
