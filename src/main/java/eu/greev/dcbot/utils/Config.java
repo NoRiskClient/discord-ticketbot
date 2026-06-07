@@ -22,6 +22,7 @@ public class Config {
     private long unclaimedCategory;
     private long baseChannel;
     private long logChannel = 0;
+    private long supporterReminderChannel = 0;
     private long ratingStatsChannel = 0;
     private long specialStatsChannel = 0;
     private boolean devMode = false;

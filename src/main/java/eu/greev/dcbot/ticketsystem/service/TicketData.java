@@ -303,6 +303,15 @@ public class TicketData {
                 }));
     }
 
+    public List<String> getOpenTicketsChannelIdsBySupporter(String supporterId) {
+        return jdbi.withHandle(handle -> handle.createQuery(
+                "SELECT channelID FROM tickets WHERE isOpen = true AND supporter = ? ORDER BY ticketID ASC")
+                .bind(0, supporterId)
+                .mapTo(String.class)
+                .list()
+        );
+    }
+
     /**
      * Marks a stale ticket as closed in the database.
      * Used when the ticket's Discord channel no longer exists.
