@@ -1,6 +1,8 @@
 package eu.greev.dcbot.ticketsystem.interactions;
 
+import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import java.awt.*;
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * Handles ticket closing with mandatory rating flow.
@@ -39,6 +42,7 @@ public class TicketClose implements Interaction {
     private final EmbedBuilder wrongChannel;
     private final EmbedBuilder missingPerm;
     private final TicketService ticketService;
+    private final TicketData ticketData;
 
     @Override
     public void execute(Event evt) {
@@ -171,6 +175,21 @@ public class TicketClose implements Interaction {
             ticket.setRemindersSent(0);
             // Update channel name to remove waiting emoji
             ticketService.toggleWaiting(ticket, false);
+        }
+
+        Category parentCategory = ticket.getTextChannel().getParentCategory();
+
+        if (parentCategory != null && parentCategory.getChannels().size() == 1) {
+            Long supporterIdForCategory = Main.SUPPORTER_CATEGORIES.entrySet().stream()
+                    .filter(e -> e.getValue().equals(parentCategory))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+            if (supporterIdForCategory != null) {
+                Main.SUPPORTER_CATEGORIES.remove(supporterIdForCategory);
+                ticketData.deleteSupporterCategory(parentCategory.getId());
+                parentCategory.delete().queue();
+            }
         }
 
         // Move ticket to pending rating category

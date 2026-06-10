@@ -312,11 +312,7 @@ public class TicketService {
                         .orElse(null);
                 if (supporterIdForCategory != null) {
                     Main.SUPPORTER_CATEGORIES.remove(supporterIdForCategory);
-                    jdbi.useHandle(handle ->
-                            handle.createUpdate("DELETE FROM supporter_categories WHERE categoryID = ?")
-                                    .bind(0, parentCategory.getId())
-                                    .execute()
-                    );
+                    ticketData.deleteSupporterCategory(parentCategory.getId());
                     parentCategory.delete().queue();
                 }
             }

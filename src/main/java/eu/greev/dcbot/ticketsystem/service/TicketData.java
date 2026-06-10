@@ -287,6 +287,12 @@ public class TicketData {
                 }));
     }
 
+    public void deleteSupporterCategory(String categoryId) {
+        jdbi.useHandle(handle -> handle.createUpdate("DELETE FROM supporter_categories WHERE categoryID = ?")
+                .bind(0, categoryId)
+                .execute());
+    }
+
     public int countTotalClosedTickets() {
         return jdbi.withHandle(handle -> handle.createQuery("SELECT COUNT(*) FROM tickets WHERE isOpen = false")
                 .mapTo(Integer.class)

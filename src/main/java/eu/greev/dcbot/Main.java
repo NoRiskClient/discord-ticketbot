@@ -175,7 +175,7 @@ public class Main {
                 .addField("❌ **Wrong channel**", "You have to use this command in a ticket!", false);
 
         registerInteraction("claim", new TicketClaim(jda, config, wrongChannel, missingPerm, ticketService));
-        registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService));
+        registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService, ticketData));
         registerInteraction("force-close", new ForceClose(config, ticketService, missingPerm, wrongChannel, jda));
 
         registerInteraction("ticket-confirm", new TicketConfirm(ticketService));
