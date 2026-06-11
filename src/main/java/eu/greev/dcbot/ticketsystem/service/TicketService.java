@@ -125,7 +125,28 @@ public class TicketService {
                 return Optional.of("An error occurred while creating the ticket channel: " + e.getMessage());
             }
         }
-        ThreadChannel thread = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
+
+        ThreadChannel threadChannel;
+
+        try {
+            threadChannel = ticketChannel.createThreadChannel("Discussion-" + ticket.getId(), true).complete();
+        } catch (ErrorResponseException e) {
+            if (e.getErrorCode() == 160006) {
+                log.warn("Active thread limit reached, falling back to placeholder thread.");
+                ThreadChannel fallback = guild.getThreadChannelById(config.getPlaceholderThreadId());
+                if (fallback != null) {
+                    threadChannel = fallback;
+                } else {
+                    log.error("Failed to create thread for ticket #{} and placeholder thread not found!", ticket.getId(), e);
+                    threadChannel = null;
+                }
+            } else {
+                log.error("Failed to create thead for ticket #{}", ticket.getId(), e);
+                threadChannel = null;
+            }
+        }
+
+        final ThreadChannel thread = threadChannel;
 
         EmbedBuilder builder = new EmbedBuilder().setColor(Color.decode(config.getColor()))
                 .setDescription("Hello there, " + owner.getAsMention() + "! " + """
@@ -181,17 +202,19 @@ public class TicketService {
                     finalTicket.setTempMsgId(suc.getId());
                 });
 
-        config.getAddToTicketThread().forEach(id -> {
-            Role role = guild.getRoleById(id);
-            if (role != null) {
-                guild.findMembersWithRoles(role).onSuccess(list -> list.forEach(member -> thread.addThreadMember(member).queue()));
-                return;
-            }
-            Member member = guild.retrieveMemberById(id).complete();
-            if (member != null) {
-                thread.addThreadMember(member).queue();
-            }
-        });
+        if (thread != null) {
+            config.getAddToTicketThread().forEach(id -> {
+                Role role = guild.getRoleById(id);
+                if (role != null) {
+                    guild.findMembersWithRoles(role).onSuccess(list -> list.forEach(member -> thread.addThreadMember(member).queue()));
+                    return;
+                }
+                Member member = guild.retrieveMemberById(id).complete();
+                if (member != null) {
+                    thread.addThreadMember(member).queue();
+                }
+            });
+        }
         return Optional.empty();
     }
 
@@ -334,7 +357,9 @@ public class TicketService {
             }
         }
 
-        ticket.getThreadChannel().addThreadMember(supporter).queue();
+        if (ticket.getThreadChannel() != null) {
+            ticket.getThreadChannel().addThreadMember(supporter).queue();
+        }
 
         Guild guild = jda.getGuildById(config.getServerId());
 

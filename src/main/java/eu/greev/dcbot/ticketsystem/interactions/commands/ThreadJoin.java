@@ -38,6 +38,16 @@ public class ThreadJoin extends AbstractCommand {
         }
         ThreadChannel thread = ticket.getThreadChannel();
 
+        if (thread == null) {
+            event.replyEmbeds(new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
+                    .setColor(Color.RED)
+                    .addField("❌ **Joining ticket thread failed**", "The ticket thread does not exist", false)
+                    .build())
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
+
         if (thread.getMembers().contains(event.getMember())) {
             event.replyEmbeds(new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                     .setColor(Color.RED)

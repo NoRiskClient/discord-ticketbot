@@ -16,7 +16,7 @@ public class Bug implements  ICategory {
 
     @Override
     public String getLabel() {
-        return "Bug";
+        return "Bug Report";
     }
 
     @Override

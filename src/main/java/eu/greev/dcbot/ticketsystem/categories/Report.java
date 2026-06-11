@@ -16,7 +16,7 @@ public class Report implements ICategory {
 
     @Override
     public String getLabel() {
-        return "Report";
+        return "Report a Player";
     }
 
     @Override
