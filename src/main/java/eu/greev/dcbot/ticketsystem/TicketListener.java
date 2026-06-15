@@ -130,7 +130,7 @@ public class TicketListener extends ListenerAdapter {
             return;
         }
 
-        if (buttonId.startsWith("rating-") && !buttonId.equals("ticket-confirm-rating")) {
+        if (buttonId.startsWith("rating-")) {
             Main.INTERACTIONS.get("rating-select").execute(event);
             return;
         }

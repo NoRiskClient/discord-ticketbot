@@ -208,49 +208,9 @@ public class TicketClose implements Interaction {
                 .addField("Supporter", ticket.getSupporter().getAsMention(), true)
                 .setFooter(config.getServerName(), config.getServerLogo());
 
-        try {
-            ticket.getOwner().openPrivateChannel()
-                    .flatMap(channel -> channel.sendMessageEmbeds(ratingEmbed.build())
-                            .addActionRow(
-                                    Button.secondary("rating-1-" + ticket.getId(), "⭐"),
-                                    Button.secondary("rating-2-" + ticket.getId(), "⭐⭐"),
-                                    Button.primary("rating-3-" + ticket.getId(), "⭐⭐⭐"),
-                                    Button.primary("rating-4-" + ticket.getId(), "⭐⭐⭐⭐"),
-                                    Button.success("rating-5-" + ticket.getId(), "⭐⭐⭐⭐⭐")
-                            )
-                            .addActionRow(
-                                    Button.danger("rating-skip-" + ticket.getId(), "Nein danke")
-                            ))
-                    .queue(
-                            success -> {
-                                EmbedBuilder confirmation = new EmbedBuilder()
-                                        .setColor(Color.GREEN)
-                                        .setFooter(config.getServerName(), config.getServerLogo())
-                                        .addField("Ticket closed", "The ticket has been closed and " + ticket.getOwner().getAsMention() + " has been asked to rate their experience.", false);
-                                hook.sendMessageEmbeds(confirmation.build()).setEphemeral(true).queue();
-
-                                EmbedBuilder waitingEmbed = new EmbedBuilder()
-                                        .setColor(Color.YELLOW)
-                                        .setDescription("⏳ Waiting for " + ticket.getOwner().getAsMention() + " to submit their rating...");
-                                ticket.getTextChannel().sendMessageEmbeds(waitingEmbed.build()).queue();
-                            },
-                            error -> handleDMFailure(ticket, hook)
-                    );
-        } catch (Exception e) {
-            handleDMFailure(ticket, hook);
-        }
-    }
-
-    private void handleDMFailure(Ticket ticket, InteractionHook hook) {
-        EmbedBuilder ratingEmbed = new EmbedBuilder()
-                .setColor(Color.decode(config.getColor()))
-                .setTitle("Rate Your Support Experience")
-                .setDescription(ticket.getOwner().getAsMention() + ", please rate your experience before this ticket closes!")
-                .addField("Supporter", ticket.getSupporter().getAsMention(), true)
-                .setFooter(config.getServerName(), config.getServerLogo());
-
-        ticket.getTextChannel().sendMessage(ticket.getOwner().getAsMention())
-                .setEmbeds(ratingEmbed.build())
+        ticket.getTextChannel()
+                .sendMessage(ticket.getOwner().getAsMention())
+                .addEmbeds(ratingEmbed.build())
                 .addActionRow(
                         Button.secondary("rating-1-" + ticket.getId(), "⭐"),
                         Button.secondary("rating-2-" + ticket.getId(), "⭐⭐"),
@@ -259,14 +219,17 @@ public class TicketClose implements Interaction {
                         Button.success("rating-5-" + ticket.getId(), "⭐⭐⭐⭐⭐")
                 )
                 .addActionRow(
-                        Button.danger("rating-skip-" + ticket.getId(), "Nein danke")
-                ).queue();
-
-        EmbedBuilder confirmation = new EmbedBuilder()
-                .setColor(Color.YELLOW)
-                .setFooter(config.getServerName(), config.getServerLogo())
-                .addField("Ticket closed", "Could not send DM to ticket owner. Rating request has been sent in this channel.", false);
-        hook.sendMessageEmbeds(confirmation.build()).setEphemeral(true).queue();
+                        Button.danger("rating-skip-" + ticket.getId(), "No Rating")
+                )
+                .queue(
+                        success -> {
+                            EmbedBuilder confirmation = new EmbedBuilder()
+                                    .setColor(Color.GREEN)
+                                    .setFooter(config.getServerName(), config.getServerLogo())
+                                    .addField("Ticket closed", "The ticket has been closed and " + ticket.getOwner().getAsMention() + " has been asked to rate their experience.", false);
+                            hook.sendMessageEmbeds(confirmation.build()).setEphemeral(true).queue();
+                        }
+                );
     }
 
     /**
