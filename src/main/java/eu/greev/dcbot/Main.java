@@ -234,7 +234,6 @@ public class Main {
 
         registerInteraction("clean-up", new Cleanup(config, ticketService, missingPerm, jda));
 
-        registerInteraction("ticket-confirm-rating", new TicketConfirmRating(ticketService, config));
         registerInteraction("rating-select", new RatingSelect(ticketService));
         registerInteraction("rating-modal", new RatingModal(ticketService, ratingData, config, jda, xpService, supporterSettingsData));
         registerInteraction("rating-skip", new RatingSkip(ticketService, config, jda, xpService, supporterSettingsData));
