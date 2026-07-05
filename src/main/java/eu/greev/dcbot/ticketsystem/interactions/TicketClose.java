@@ -181,12 +181,12 @@ public class TicketClose implements Interaction {
 
         if (parentCategory != null && parentCategory.getChannels().size() == 1) {
             Long supporterIdForCategory = Main.SUPPORTER_CATEGORIES.entrySet().stream()
-                    .filter(e -> e.getValue().equals(parentCategory))
+                    .filter(e -> e.getValue().contains(parentCategory))
                     .map(Map.Entry::getKey)
                     .findFirst()
                     .orElse(null);
             if (supporterIdForCategory != null) {
-                Main.SUPPORTER_CATEGORIES.remove(supporterIdForCategory);
+                Main.SUPPORTER_CATEGORIES.get(supporterIdForCategory).remove(parentCategory);
                 ticketData.deleteSupporterCategory(parentCategory.getId());
                 parentCategory.delete().queue();
             }

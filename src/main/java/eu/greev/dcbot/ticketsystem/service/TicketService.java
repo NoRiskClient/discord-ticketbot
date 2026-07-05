@@ -16,7 +16,6 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
-import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
@@ -329,12 +328,12 @@ public class TicketService {
             } else {
                 // Check if it's a supporter category and delete if now empty
                 Long supporterIdForCategory = Main.SUPPORTER_CATEGORIES.entrySet().stream()
-                        .filter(e -> e.getValue().equals(parentCategory))
+                        .filter(e -> e.getValue().contains(parentCategory))
                         .map(Map.Entry::getKey)
                         .findFirst()
                         .orElse(null);
                 if (supporterIdForCategory != null) {
-                    Main.SUPPORTER_CATEGORIES.remove(supporterIdForCategory);
+                    Main.SUPPORTER_CATEGORIES.get(supporterIdForCategory).remove(parentCategory);
                     ticketData.deleteSupporterCategory(parentCategory.getId());
                     parentCategory.delete().queue();
                 }
@@ -366,7 +365,7 @@ public class TicketService {
         Category supporterCategory = getOrCreateSupporterCategory(guild, supporter);
         ticket.getTextChannel().getManager().setParent(supporterCategory).delay(500, TimeUnit.MILLISECONDS).queue(
                 success -> supporterCategory.modifyTextChannelPositions()
-                        .sortOrder(getChannelComparator())
+                        .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
                         .queue(),
                 error -> log.error("Couldn't move ticket channel to supporter category!", error)
         );
@@ -400,21 +399,6 @@ public class TicketService {
                 .setActionRow(Button.danger("close", "Close"))
                 .queue();
         return true;
-    }
-
-    public Comparator<GuildChannel> getChannelComparator() {
-        return (o1, o2) -> {
-            Ticket t1 = getTicketByChannelId(o1.getIdLong());
-            Ticket t2 = getTicketByChannelId(o2.getIdLong());
-
-            if (t1 == null || t2 == null) {
-                return 0;
-            } else {
-                int result = Long.compare(t1.getSupporter().getIdLong(), t2.getSupporter().getIdLong());
-
-                return result != 0 ? result : Long.compare(t1.getId(), t2.getId());
-            }
-        };
     }
 
     public static final String PENDING_RATING_OVERFLOW_KEY = "pending-rating";
@@ -459,7 +443,7 @@ public class TicketService {
 
                     Category category = guild.getCategoryById(categoryIdStr);
                     if (category != null) {
-                        Main.SUPPORTER_CATEGORIES.put(Long.parseLong(supporterIdStr), category);
+                        Main.SUPPORTER_CATEGORIES.computeIfAbsent(Long.parseLong(supporterIdStr), k -> new ArrayList<>()).add(category);
                     } else {
                         handle.createUpdate("DELETE FROM supporter_categories WHERE categoryID = ?")
                                 .bind(0, categoryIdStr)
@@ -473,32 +457,39 @@ public class TicketService {
 
 
     private Category getOrCreateSupporterCategory(Guild guild, User supporter) {
-        Category existing = Main.SUPPORTER_CATEGORIES.get(supporter.getIdLong());
-        if (existing != null) {
-            return existing;
-        }
+        List<Category> existing = Main.SUPPORTER_CATEGORIES.computeIfAbsent(supporter.getIdLong(), k -> new ArrayList<>());
+        return existing
+                .stream()
+                .filter(c -> c.getChannels().size() < 2)
+                .findFirst()
+                .orElseGet(() -> {
+                    String categoryName = config.getClaimEmojis().getOrDefault(supporter.getIdLong(), "✓") + " " + supporter.getName();
+                    Category newCategory = guild.createCategory(categoryName).complete();
 
-        String categoryName = "🎫 " + supporter.getName();
-        Category newCategory = guild.createCategory(categoryName).complete();
+                    Category unclaimedCategory = guild.getCategoryById(config.getUnclaimedCategory());
+                    Category lastSupporterCategory = existing.isEmpty() ? null : existing.getLast();
+                    if (lastSupporterCategory != null) {
+                        guild.modifyCategoryPositions()
+                                .selectPosition(newCategory)
+                                .moveBelow(lastSupporterCategory)
+                                .queue();
+                    } else if (unclaimedCategory != null) {
+                        guild.modifyCategoryPositions()
+                                .selectPosition(newCategory)
+                                .moveBelow(unclaimedCategory)
+                                .queue();
+                    }
 
-        // Position it below the unclaimed category
-        Category unclaimedCategory = guild.getCategoryById(config.getUnclaimedCategory());
-        if (unclaimedCategory != null) {
-            guild.modifyCategoryPositions()
-                    .selectPosition(newCategory)
-                    .moveBelow(unclaimedCategory)
-                    .queue();
-        }
+                    Main.SUPPORTER_CATEGORIES.get(supporter.getIdLong()).add(newCategory);
+                    jdbi.useHandle(handle ->
+                            handle.createUpdate("INSERT INTO supporter_categories (categoryID, supporterID) VALUES (?, ?)")
+                                    .bind(0, newCategory.getId())
+                                    .bind(1, supporter.getId())
+                                    .execute()
+                    );
 
-        Main.SUPPORTER_CATEGORIES.put(supporter.getIdLong(), newCategory);
-        jdbi.useHandle(handle ->
-                handle.createUpdate("INSERT INTO supporter_categories (categoryID, supporterID) VALUES (?, ?)")
-                        .bind(0, newCategory.getId())
-                        .bind(1, String.valueOf(supporter.getIdLong()))
-                        .execute()
-        );
-
-        return newCategory;
+                    return newCategory;
+                });
     }
 
     private Category createDynamicCategory(Category defaultCategory, Ticket ticket, List<Category> dynamicCategories) {
@@ -757,6 +748,7 @@ public class TicketService {
         }
     }
 
+    // TODO: rewrite consolidation
     public void consolidateChannels(List<Category> categories, Category mainCategory, ICategory ticketCategory) {
         if (mainCategory == null) {
             return;
@@ -788,7 +780,7 @@ public class TicketService {
         categoriesToKeep.forEach(c -> {
                     if (!c.getChannels().isEmpty() && ticketCategory != null) {
                         c.modifyTextChannelPositions()
-                                .sortOrder(getChannelComparator())
+                                .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
                                 .queue();
                     }
                 }
