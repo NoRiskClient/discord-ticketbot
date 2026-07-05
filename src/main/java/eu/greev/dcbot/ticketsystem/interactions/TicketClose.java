@@ -22,7 +22,6 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 import java.awt.*;
 import java.time.Instant;
-import java.util.Map;
 
 /**
  * Handles ticket closing with mandatory rating flow.
@@ -180,13 +179,9 @@ public class TicketClose implements Interaction {
         Category parentCategory = ticket.getTextChannel().getParentCategory();
 
         if (parentCategory != null && parentCategory.getChannels().size() == 1) {
-            Long supporterIdForCategory = Main.SUPPORTER_CATEGORIES.entrySet().stream()
-                    .filter(e -> e.getValue().contains(parentCategory))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(null);
-            if (supporterIdForCategory != null) {
-                Main.SUPPORTER_CATEGORIES.get(supporterIdForCategory).remove(parentCategory);
+            Long supporterId = ticketService.getSupporterFromCategory(parentCategory);
+            if (supporterId != null) {
+                Main.SUPPORTER_CATEGORIES.get(supporterId).remove(parentCategory);
                 ticketData.deleteSupporterCategory(parentCategory.getId());
                 parentCategory.delete().queue();
             }

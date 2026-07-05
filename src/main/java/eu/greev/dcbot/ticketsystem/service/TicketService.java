@@ -307,7 +307,7 @@ public class TicketService {
         Category parentCategory = ticket.getTextChannel().getParentCategory();
 
         ticket.getTextChannel().delete().queue(v -> {
-            if (parentCategory == null || parentCategory.getChannels().size() > 0) return;
+            if (parentCategory == null || !parentCategory.getChannels().isEmpty()) return;
 
             if (Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.contains(parentCategory)) {
                 Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(parentCategory);
@@ -326,14 +326,9 @@ public class TicketService {
                 );
                 parentCategory.delete().queue();
             } else {
-                // Check if it's a supporter category and delete if now empty
-                Long supporterIdForCategory = Main.SUPPORTER_CATEGORIES.entrySet().stream()
-                        .filter(e -> e.getValue().contains(parentCategory))
-                        .map(Map.Entry::getKey)
-                        .findFirst()
-                        .orElse(null);
-                if (supporterIdForCategory != null) {
-                    Main.SUPPORTER_CATEGORIES.get(supporterIdForCategory).remove(parentCategory);
+                Long supporterId = getSupporterFromCategory(parentCategory);
+                if (supporterId != null) {
+                    Main.SUPPORTER_CATEGORIES.get(supporterId).remove(parentCategory);
                     ticketData.deleteSupporterCategory(parentCategory.getId());
                     parentCategory.delete().queue();
                 }
@@ -362,11 +357,33 @@ public class TicketService {
 
         Guild guild = jda.getGuildById(config.getServerId());
 
+        Category oldCategory = ticket.getTextChannel().getParentCategory();
         Category supporterCategory = getOrCreateSupporterCategory(guild, supporter);
         ticket.getTextChannel().getManager().setParent(supporterCategory).delay(500, TimeUnit.MILLISECONDS).queue(
-                success -> supporterCategory.modifyTextChannelPositions()
-                        .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
-                        .queue(),
+                success -> {
+                    supporterCategory.modifyTextChannelPositions()
+                            .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
+                            .queue();
+
+                    if (oldCategory != null && oldCategory.getChannels().isEmpty()) {
+                        if (Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.contains(oldCategory)) {
+                            Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(oldCategory);
+                            oldCategory.delete().queue();
+                            jdbi.useHandle(handle ->
+                                    handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
+                                            .bind(0, oldCategory.getId())
+                                            .execute()
+                            );
+                        } else {
+                            Long supporterId = getSupporterFromCategory(oldCategory);
+                            if (supporterId != null) {
+                                Main.SUPPORTER_CATEGORIES.get(supporterId).remove(oldCategory);
+                                ticketData.deleteSupporterCategory(oldCategory.getId());
+                                oldCategory.delete().queue();
+                            }
+                        }
+                    }
+                },
                 error -> log.error("Couldn't move ticket channel to supporter category!", error)
         );
 
@@ -381,17 +398,6 @@ public class TicketService {
             }
         } else {
             ticket.getTextChannel().upsertPermissionOverride(jda.getRoleById(config.getStaffId())).setAllowed(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY).queue();
-        }
-
-        Category parentCategory = ticket.getTextChannel().getParentCategory();
-        if (parentCategory != null && Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.contains(parentCategory) && parentCategory.getChannels().size() <= 1) {
-            Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(parentCategory);
-            parentCategory.delete().queue();
-            jdbi.useHandle(handle ->
-                    handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                            .bind(0, parentCategory.getId())
-                            .execute()
-            );
         }
 
         ticket.getTranscript().addLogMessage("[" + supporter.getName() + "] claimed the ticket.", Instant.now().getEpochSecond(), ticket.getId());
@@ -466,17 +472,17 @@ public class TicketService {
                     String categoryName = config.getClaimEmojis().getOrDefault(supporter.getIdLong(), "✓") + " " + supporter.getName();
                     Category newCategory = guild.createCategory(categoryName).complete();
 
-                    Category unclaimedCategory = guild.getCategoryById(config.getUnclaimedCategory());
+                    Category lastUnclaimedCategory = Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.isEmpty() ? guild.getCategoryById(config.getUnclaimedCategory()) : Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.getLast();
                     Category lastSupporterCategory = existing.isEmpty() ? null : existing.getLast();
                     if (lastSupporterCategory != null) {
                         guild.modifyCategoryPositions()
                                 .selectPosition(newCategory)
                                 .moveBelow(lastSupporterCategory)
                                 .queue();
-                    } else if (unclaimedCategory != null) {
+                    } else if (lastUnclaimedCategory != null) {
                         guild.modifyCategoryPositions()
                                 .selectPosition(newCategory)
-                                .moveBelow(unclaimedCategory)
+                                .moveBelow(lastUnclaimedCategory)
                                 .queue();
                     }
 
@@ -855,5 +861,45 @@ public class TicketService {
 
             category.delete().queue();
         }
+    }
+
+    public void transfer(Ticket ticket, User supporter) {
+        ticket.setSupporter(supporter);
+        try {
+            ticket.getTextChannel().getManager().setName(generateChannelName(ticket, false)).complete();
+        } catch (ErrorResponseException e) {
+            if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
+                ticket.getTextChannel().getManager().setName(generateChannelName(ticket, true)).complete();
+            } else {
+                log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e);
+            }
+        }
+        Category oldCategory = ticket.getTextChannel().getParentCategory();
+        Category newCategory = getOrCreateSupporterCategory(ticket.getTextChannel().getGuild(), supporter);
+
+        ticket.getTextChannel().getManager().setParent(newCategory).delay(500, TimeUnit.MILLISECONDS).queue(
+                success -> {
+                    newCategory.modifyTextChannelPositions()
+                            .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
+                            .queue();
+                    if (oldCategory != null && oldCategory.getChannels().isEmpty()) {
+                        Long supporterId = getSupporterFromCategory(oldCategory);
+                        if (supporterId != null) {
+                            Main.SUPPORTER_CATEGORIES.get(supporterId).remove(oldCategory);
+                            ticketData.deleteSupporterCategory(oldCategory.getId());
+                            oldCategory.delete().queue();
+                        }
+                    }
+                },
+                error -> log.error("Couldn't move ticket channel to supporter category!", error)
+        );
+    }
+
+    public Long getSupporterFromCategory(Category category) {
+        return Main.SUPPORTER_CATEGORIES.entrySet().stream()
+                .filter(e -> e.getValue().contains(category))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
     }
 }

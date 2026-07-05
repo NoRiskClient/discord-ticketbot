@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 
 import java.awt.*;
 import java.time.Instant;
@@ -60,16 +59,8 @@ public class Transfer extends AbstractCommand {
 
         Member sup = event.getOption("staff").getAsMember();
         if (sup.getRoles().contains(jda.getRoleById(config.getStaffId())) || !sup.getUser().equals(ticket.getSupporter())) {
-            ticket.setSupporter(sup.getUser());
-            try {
-                ticket.getTextChannel().getManager().setName(ticketService.generateChannelName(ticket, false)).complete();
-            } catch (ErrorResponseException e) {
-                if (e.getMessage().contains("INVALID_COMMUNITY_PROPERTY_NAME")) {
-                    ticket.getTextChannel().getManager().setName(ticketService.generateChannelName(ticket, true)).complete();
-                } else {
-                    log.error("Couldn't rename ticket channel for ticket {}!", ticket.getId(), e);
-                }
-            }
+            ticketService.transfer(ticket, sup.getUser());
+
             EmbedBuilder builder = new EmbedBuilder().setFooter(config.getServerName(), config.getServerLogo())
                     .setColor(Color.decode(config.getColor()))
                     .setAuthor(event.getUser().getName(), null, event.getUser().getEffectiveAvatarUrl())
