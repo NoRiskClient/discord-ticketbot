@@ -460,7 +460,7 @@ public class TicketService {
         List<Category> existing = Main.SUPPORTER_CATEGORIES.computeIfAbsent(supporter.getIdLong(), k -> new ArrayList<>());
         return existing
                 .stream()
-                .filter(c -> c.getChannels().size() < 2)
+                .filter(c -> c.getChannels().size() < 50)
                 .findFirst()
                 .orElseGet(() -> {
                     String categoryName = config.getClaimEmojis().getOrDefault(supporter.getIdLong(), "✓") + " " + supporter.getName();
