@@ -1,6 +1,8 @@
 package eu.greev.dcbot.ticketsystem.interactions;
 
+import eu.greev.dcbot.Main;
 import eu.greev.dcbot.ticketsystem.entities.Ticket;
+import eu.greev.dcbot.ticketsystem.service.TicketData;
 import eu.greev.dcbot.ticketsystem.service.TicketService;
 import eu.greev.dcbot.utils.Config;
 import lombok.AllArgsConstructor;
@@ -39,6 +41,7 @@ public class TicketClose implements Interaction {
     private final EmbedBuilder wrongChannel;
     private final EmbedBuilder missingPerm;
     private final TicketService ticketService;
+    private final TicketData ticketData;
 
     @Override
     public void execute(Event evt) {
@@ -173,13 +176,11 @@ public class TicketClose implements Interaction {
             ticketService.toggleWaiting(ticket, false);
         }
 
-        // Move ticket to pending rating category
-        Category pendingCategory = ticketService.getAvailablePendingRatingCategory();
-        if (pendingCategory != null) {
-            ticket.getTextChannel().getManager()
-                    .setParent(pendingCategory)
-                    .queue();
-        }
+        Category parentCategory = ticket.getTextChannel().getParentCategory();
+
+        ticket.getTextChannel().getManager()
+                .setParent(ticketService.getOrCreateChannelCategory(Main.PENDING_RATING_KEY, null))
+                .queue(success -> ticketService.fillUpOrDeleteCategoryIfPossible(parentCategory));
 
         // Remove supporter from ticket (can't see it anymore)
         ticket.getTextChannel()

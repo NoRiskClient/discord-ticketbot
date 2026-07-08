@@ -52,12 +52,12 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class Main {
+    public static final String UNCLAIMED_KEY = "unclaimed";
+    public static final String PENDING_RATING_KEY = "pending_rating";
     public static final Map<String, Interaction> INTERACTIONS = new HashMap<>();
     public static final List<ICategory> CATEGORIES = new ArrayList<>();
     public static final List<TicketGroup> GROUPS = new ArrayList<>();
-    public static final Map<ICategory, List<Category>> OVERFLOW_CHANNEL_CATEGORIES = new HashMap<>();
-    public static final List<Category> OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES = new ArrayList<>();
-    public static final List<Category> OVERFLOW_PENDING_RATING_CATEGORIES = new ArrayList<>();
+    public static final Map<String, List<Category>> CHANNEL_CATEGORIES = new HashMap<>();
     @Getter
     private static String createCommandId;
     @Getter
@@ -99,6 +99,9 @@ public class Main {
             System.exit(1);
         }
         jda.awaitReady();
+
+        CHANNEL_CATEGORIES.put(UNCLAIMED_KEY, new ArrayList<>(List.of(jda.getCategoryById(config.getUnclaimedCategory()))));
+        CHANNEL_CATEGORIES.put(PENDING_RATING_KEY, new ArrayList<>(List.of(jda.getCategoryById(config.getPendingRatingCategory()))));
 
         initDatasource();
 
@@ -142,7 +145,7 @@ public class Main {
             registerInteraction("group-" + group.getId(), new GroupSelection(group, config));
         }
 
-        ticketService.loadOverflowCategories();
+        ticketService.loadChannelCategories();
 
         jda.updateCommands().addCommands(Commands.slash("ticket", "Manage the ticket system")
                 .addSubcommands(new SubcommandData("add", "Add a User to this ticket")
@@ -203,7 +206,7 @@ public class Main {
                 .addField("❌ **Wrong channel**", "You have to use this command in a ticket!", false);
 
         registerInteraction("claim", new TicketClaim(jda, config, wrongChannel, missingPerm, ticketService));
-        registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService));
+        registerInteraction("close", new TicketClose(jda, config, wrongChannel, missingPerm, ticketService, ticketData));
         registerInteraction("force-close", new ForceClose(config, ticketService, missingPerm, wrongChannel, jda));
 
         registerInteraction("ticket-confirm", new TicketConfirm(ticketService));
@@ -231,8 +234,6 @@ public class Main {
 
         registerInteraction("set-claim-emoji", new SetClaimEmoji(config, ticketService, missingPerm, jda));
         registerInteraction("list-claim-emojis", new ListClaimEmojis(config, ticketService, missingPerm, jda));
-
-        registerInteraction("clean-up", new Cleanup(config, ticketService, missingPerm, jda));
 
         registerInteraction("ticket-confirm-rating", new TicketConfirmRating(ticketService, config));
         registerInteraction("rating-select", new RatingSelect(ticketService));
@@ -303,6 +304,14 @@ public class Main {
         } catch (Exception e) {
             // Column doesn't exist, ignore
         }
+
+        // Migration: Delete overflow_categories table if it exists (replaced by channel_categories)
+        try {
+            jdbi.withHandle(h -> h.createUpdate("DROP TABLE IF EXISTS overflow_categories").execute());
+            log.info("Dropped overflow_categories table");
+        } catch (Exception e) {
+            // Table doesn't exist, ignore
+        }
     }
 
     private static void registerInteraction(String identifier, Interaction interaction) {
@@ -312,7 +321,6 @@ public class Main {
     private static void registerCategory(ICategory category, Config config, TicketService ticketService, TicketData ticketData) {
         registerInteraction("select-" + category.getId(), new CategorySelection(category, config));
         registerInteraction(category.getId(), new TicketModal(category, config, ticketService, ticketData));
-        OVERFLOW_CHANNEL_CATEGORIES.put(category, new ArrayList<>());
         CATEGORIES.add(category);
     }
 }
