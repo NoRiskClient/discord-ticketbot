@@ -88,18 +88,7 @@ public class TicketService {
         int newId = ticketData.saveTicket(ticket);
         ticket = ticket.toBuilder().id(newId).build();
 
-        Category defaultCategory = guild.getCategoryById(config.getUnclaimedCategory());
-        List<Category> dynamicCategories = Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES;
-
-        Ticket finalTicket1 = ticket;
-        Category channelCategory = defaultCategory.getChannels().size() >= 50 ?
-                dynamicCategories
-                        .stream()
-                        .filter(c -> c.getChannels().size() < 50)
-                        .findFirst()
-                        .orElseGet(() -> createDynamicCategory(defaultCategory, finalTicket1, dynamicCategories)) : defaultCategory;
-
-        ChannelAction<TextChannel> action = guild.createTextChannel(generateChannelName(ticket, false), channelCategory)
+        ChannelAction<TextChannel> action = guild.createTextChannel(generateChannelName(ticket, false), getOrCreateChannelCategory(Main.UNCLAIMED_KEY, null))
                 .addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY))
                 .addMemberPermissionOverride(owner.getIdLong(), List.of(Permission.MESSAGE_SEND, Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), null);
 
@@ -307,32 +296,7 @@ public class TicketService {
         Category parentCategory = ticket.getTextChannel().getParentCategory();
 
         ticket.getTextChannel().delete().queue(v -> {
-            if (parentCategory == null || !parentCategory.getChannels().isEmpty()) return;
-
-            if (Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.contains(parentCategory)) {
-                Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(parentCategory);
-                jdbi.useHandle(handle ->
-                        handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                                .bind(0, parentCategory.getId())
-                                .execute()
-                );
-                parentCategory.delete().queue();
-            } else if (Main.OVERFLOW_PENDING_RATING_CATEGORIES.contains(parentCategory)) {
-                Main.OVERFLOW_PENDING_RATING_CATEGORIES.remove(parentCategory);
-                jdbi.useHandle(handle ->
-                        handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                                .bind(0, parentCategory.getId())
-                                .execute()
-                );
-                parentCategory.delete().queue();
-            } else {
-                Long supporterId = getSupporterFromCategory(parentCategory);
-                if (supporterId != null) {
-                    Main.SUPPORTER_CATEGORIES.get(supporterId).remove(parentCategory);
-                    ticketData.deleteSupporterCategory(parentCategory.getId());
-                    parentCategory.delete().queue();
-                }
-            }
+            fillUpOrDeleteCategoryIfPossible(parentCategory);
         });
     }
 
@@ -355,34 +319,15 @@ public class TicketService {
             ticket.getThreadChannel().addThreadMember(supporter).queue();
         }
 
-        Guild guild = jda.getGuildById(config.getServerId());
-
         Category oldCategory = ticket.getTextChannel().getParentCategory();
-        Category supporterCategory = getOrCreateSupporterCategory(guild, supporter);
+        Category supporterCategory = getOrCreateChannelCategory(String.valueOf(supporter.getIdLong()), supporter.getName());
         ticket.getTextChannel().getManager().setParent(supporterCategory).delay(500, TimeUnit.MILLISECONDS).queue(
                 success -> {
                     supporterCategory.modifyTextChannelPositions()
                             .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
                             .queue();
 
-                    if (oldCategory != null && oldCategory.getChannels().isEmpty()) {
-                        if (Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.contains(oldCategory)) {
-                            Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(oldCategory);
-                            oldCategory.delete().queue();
-                            jdbi.useHandle(handle ->
-                                    handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                                            .bind(0, oldCategory.getId())
-                                            .execute()
-                            );
-                        } else {
-                            Long supporterId = getSupporterFromCategory(oldCategory);
-                            if (supporterId != null) {
-                                Main.SUPPORTER_CATEGORIES.get(supporterId).remove(oldCategory);
-                                ticketData.deleteSupporterCategory(oldCategory.getId());
-                                oldCategory.delete().queue();
-                            }
-                        }
-                    }
+                    fillUpOrDeleteCategoryIfPossible(oldCategory);
                 },
                 error -> log.error("Couldn't move ticket channel to supporter category!", error)
         );
@@ -407,52 +352,21 @@ public class TicketService {
         return true;
     }
 
-    public static final String PENDING_RATING_OVERFLOW_KEY = "pending-rating";
-
-    public void loadOverflowCategories() {
+    public void loadChannelCategories() {
         Guild guild = jda.getGuildById(config.getServerId());
 
-        jdbi.useHandle(handle -> handle.createQuery("SELECT categoryID, ticketCategory FROM overflow_categories")
+        jdbi.useHandle(handle -> handle.createQuery("SELECT categoryID, key FROM channel_categories")
                 .map((resultSet, index, ctx) -> {
-                    String categoryIdStr = resultSet.getString("categoryID");
-                    String ticketCategoryId = resultSet.getString("ticketCategory");
-                    log.info("Found overflow category: {} {}", categoryIdStr, ticketCategoryId);
+                    String categoryId = resultSet.getString("categoryID");
+                    String key = resultSet.getString("key");
+                    log.info("Found channel category: {} {}", categoryId, key);
 
-                    Category category = guild.getCategoryById(categoryIdStr);
+                    Category category = guild.getCategoryById(categoryId);
                     if (category != null) {
-                        if (ticketCategoryId == null) {
-                            Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.add(category);
-                        } else if (PENDING_RATING_OVERFLOW_KEY.equals(ticketCategoryId)) {
-                            Main.OVERFLOW_PENDING_RATING_CATEGORIES.add(category);
-                        } else {
-                            Main.CATEGORIES.stream()
-                                    .filter(cat -> cat.getId().equals(ticketCategoryId))
-                                    .findFirst()
-                                    .ifPresent(cat -> Main.OVERFLOW_CHANNEL_CATEGORIES.get(cat).add(category));
-                        }
+                        Main.CHANNEL_CATEGORIES.computeIfAbsent(key, k -> new ArrayList<>()).add(category);
                     } else {
-                        handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                                .bind(0, categoryIdStr)
-                                .execute();
-                    }
-
-                    return null;
-                })
-                .list());
-
-        // Load supporter categories
-        jdbi.useHandle(handle -> handle.createQuery("SELECT categoryID, supporterID FROM supporter_categories")
-                .map((resultSet, index, ctx) -> {
-                    String categoryIdStr = resultSet.getString("categoryID");
-                    String supporterIdStr = resultSet.getString("supporterID");
-                    log.info("Found supporter category: {} for supporter {}", categoryIdStr, supporterIdStr);
-
-                    Category category = guild.getCategoryById(categoryIdStr);
-                    if (category != null) {
-                        Main.SUPPORTER_CATEGORIES.computeIfAbsent(Long.parseLong(supporterIdStr), k -> new ArrayList<>()).add(category);
-                    } else {
-                        handle.createUpdate("DELETE FROM supporter_categories WHERE categoryID = ?")
-                                .bind(0, categoryIdStr)
+                        handle.createUpdate("DELETE FROM channel_categories WHERE categoryID = ?")
+                                .bind(0, categoryId)
                                 .execute();
                     }
 
@@ -461,36 +375,37 @@ public class TicketService {
                 .list());
     }
 
-
-    private Category getOrCreateSupporterCategory(Guild guild, User supporter) {
-        List<Category> existing = Main.SUPPORTER_CATEGORIES.computeIfAbsent(supporter.getIdLong(), k -> new ArrayList<>());
-        return existing
+    public Category getOrCreateChannelCategory(String key, String supporterName) {
+        return Main.CHANNEL_CATEGORIES.computeIfAbsent(key, k -> new ArrayList<>())
                 .stream()
                 .filter(c -> c.getChannels().size() < 50)
                 .findFirst()
                 .orElseGet(() -> {
-                    String categoryName = config.getClaimEmojis().getOrDefault(supporter.getIdLong(), "✓") + " " + supporter.getName();
-                    Category newCategory = guild.createCategory(categoryName).complete();
+                    Guild guild = jda.getGuildById(config.getServerId());
+                    Category newCategory;
 
-                    Category lastUnclaimedCategory = Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.isEmpty() ? guild.getCategoryById(config.getUnclaimedCategory()) : Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.getLast();
-                    Category lastSupporterCategory = existing.isEmpty() ? null : existing.getLast();
-                    if (lastSupporterCategory != null) {
-                        guild.modifyCategoryPositions()
-                                .selectPosition(newCategory)
-                                .moveBelow(lastSupporterCategory)
-                                .queue();
-                    } else if (lastUnclaimedCategory != null) {
-                        guild.modifyCategoryPositions()
-                                .selectPosition(newCategory)
-                                .moveBelow(lastUnclaimedCategory)
-                                .queue();
+                    if (Main.CHANNEL_CATEGORIES.get(key) == null) {
+                        Main.CHANNEL_CATEGORIES.put(key, new ArrayList<>());
+                        guild.createCategory(config.getClaimEmojis().getOrDefault(Long.parseLong(key), "✓") + " " + supporterName).complete();
                     }
 
-                    Main.SUPPORTER_CATEGORIES.get(supporter.getIdLong()).add(newCategory);
-                    jdbi.useHandle(handle ->
-                            handle.createUpdate("INSERT INTO supporter_categories (categoryID, supporterID) VALUES (?, ?)")
+                    if (supporterName != null) {
+                        newCategory = guild.createCategory(config.getClaimEmojis().getOrDefault(Long.parseLong(key), "✓") + " " + supporterName).complete();
+                    } else {
+                        newCategory = guild.createCategory(Main.CHANNEL_CATEGORIES.get(key).getFirst().getName()).complete();
+                    }
+
+                    guild.modifyCategoryPositions()
+                            .selectPosition(newCategory)
+                            .moveBelow(Main.CHANNEL_CATEGORIES.get(key).isEmpty() ? Main.CHANNEL_CATEGORIES.get(Main.UNCLAIMED_KEY).getLast() : Main.CHANNEL_CATEGORIES.get(key).getLast())
+                            .queue();
+
+                    Main.CHANNEL_CATEGORIES.get(key).add(newCategory);
+
+                    jdbi.withHandle(handle ->
+                            handle.createUpdate("INSERT INTO channel_categories (categoryID, key) VALUES (?, ?)")
                                     .bind(0, newCategory.getId())
-                                    .bind(1, supporter.getId())
+                                    .bind(1, key)
                                     .execute()
                     );
 
@@ -498,76 +413,35 @@ public class TicketService {
                 });
     }
 
-    private Category createDynamicCategory(Category defaultCategory, Ticket ticket, List<Category> dynamicCategories) {
-        Guild guild = jda.getGuildById(config.getServerId());
-        Category newCategory = guild.createCategory(defaultCategory.getName() + " (Overflow)").complete();
+    public void fillUpOrDeleteCategoryIfPossible(Category category) {
+        if (category == null) return;
 
-        guild.modifyCategoryPositions()
-                .selectPosition(newCategory)
-                .moveBelow(dynamicCategories.isEmpty() ? defaultCategory : dynamicCategories.getLast())
-                .queue();
-
-        dynamicCategories.add(newCategory);
-
-        jdbi.withHandle(handle ->
-                handle.createUpdate("INSERT INTO overflow_categories (categoryID, ticketCategory) VALUES (?, ?)")
-                        .bind(0, newCategory.getId())
-                        .bind(1, ticket.getSupporter() == null ? null : ticket.getCategory().getId())
-                        .execute()
-        );
-
-        return newCategory;
-    }
-
-    /**
-     * Creates a new overflow category for pending rating tickets.
-     */
-    public Category createPendingRatingOverflowCategory(Category defaultCategory) {
-        Guild guild = jda.getGuildById(config.getServerId());
-        List<Category> dynamicCategories = Main.OVERFLOW_PENDING_RATING_CATEGORIES;
-        Category newCategory = guild.createCategory(defaultCategory.getName() + " (Overflow)").complete();
-
-        guild.modifyCategoryPositions()
-                .selectPosition(newCategory)
-                .moveBelow(dynamicCategories.isEmpty() ? defaultCategory : dynamicCategories.getLast())
-                .queue();
-
-        dynamicCategories.add(newCategory);
-
-        jdbi.withHandle(handle ->
-                handle.createUpdate("INSERT INTO overflow_categories (categoryID, ticketCategory) VALUES (?, ?)")
-                        .bind(0, newCategory.getId())
-                        .bind(1, PENDING_RATING_OVERFLOW_KEY)
-                        .execute()
-        );
-
-        return newCategory;
-    }
-
-    /**
-     * Gets an available pending rating category (main or overflow).
-     * Creates overflow if needed.
-     */
-    public Category getAvailablePendingRatingCategory() {
-        if (config.getPendingRatingCategory() == 0) {
-            return null;
-        }
-
-        Category defaultCategory = jda.getCategoryById(config.getPendingRatingCategory());
-        if (defaultCategory == null) {
-            return null;
-        }
-
-        List<Category> dynamicCategories = Main.OVERFLOW_PENDING_RATING_CATEGORIES;
-
-        if (defaultCategory.getChannels().size() < 50) {
-            return defaultCategory;
-        }
-
-        return dynamicCategories.stream()
-                .filter(c -> c.getChannels().size() < 50)
+        List<Category> categories = Main.CHANNEL_CATEGORIES
+                .values()
+                .stream()
+                .filter(list -> list.contains(category))
                 .findFirst()
-                .orElseGet(() -> createPendingRatingOverflowCategory(defaultCategory));
+                .orElse(null);
+
+        if (categories == null) return;
+
+        if (category.getIdLong() != categories.getLast().getIdLong()) {
+            ((TextChannelManager) categories.getLast().getChannels().getLast().getManager())
+                    .setParent(category)
+                    .queue(success -> fillUpOrDeleteCategoryIfPossible(categories.getLast()));
+        }
+
+        List<Category> unclaimed = Main.CHANNEL_CATEGORIES.get(Main.UNCLAIMED_KEY);
+        List<Category> pendingRating = Main.CHANNEL_CATEGORIES.get(Main.PENDING_RATING_KEY);
+        if (category.getChannels().isEmpty() && !(unclaimed.contains(category) && unclaimed.size() == 1) && !(pendingRating.contains(category) && pendingRating.size() == 1)) {
+            Main.CHANNEL_CATEGORIES.values().forEach(list -> list.remove(category));
+            jdbi.withHandle(handle ->
+                    handle.createUpdate("DELETE FROM channel_categories WHERE categoryID = ?")
+                            .bind(0, category.getId())
+                            .execute()
+            );
+            category.delete().queue();
+        }
     }
 
     public void toggleWaiting(Ticket ticket, boolean waiting) {
@@ -719,150 +593,6 @@ public class TicketService {
         return name;
     }
 
-    public void consolidateCategoriesAndCleanup() {
-        for (ICategory category : Main.CATEGORIES) {
-
-            if (config.getCategories().get(category.getId()) == null || jda.getCategoryById(config.getCategories().get(category.getId())) == null) {
-                continue;
-            }
-
-            Category mainCategory = jda.getCategoryById(config.getCategories().get(category.getId()));
-
-            List<Category> overflowCategories = new ArrayList<>(Main.OVERFLOW_CHANNEL_CATEGORIES.get(category));
-            overflowCategories.addFirst(mainCategory);
-
-            consolidateChannels(overflowCategories, mainCategory, category);
-        }
-
-        Category mainUnclaimedCategory = jda.getCategoryById(config.getUnclaimedCategory());
-        if (mainUnclaimedCategory != null) {
-            List<Category> unclaimedOverflow = new ArrayList<>(Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES);
-            unclaimedOverflow.addFirst(mainUnclaimedCategory);
-
-            consolidateChannels(unclaimedOverflow, mainUnclaimedCategory, null);
-        }
-
-        // Consolidate pending rating categories
-        if (config.getPendingRatingCategory() != 0) {
-            Category mainPendingRatingCategory = jda.getCategoryById(config.getPendingRatingCategory());
-            if (mainPendingRatingCategory != null) {
-                List<Category> pendingRatingOverflow = new ArrayList<>(Main.OVERFLOW_PENDING_RATING_CATEGORIES);
-                pendingRatingOverflow.addFirst(mainPendingRatingCategory);
-
-                consolidatePendingRatingChannels(pendingRatingOverflow, mainPendingRatingCategory);
-            }
-        }
-    }
-
-    // TODO: rewrite consolidation
-    public void consolidateChannels(List<Category> categories, Category mainCategory, ICategory ticketCategory) {
-        if (mainCategory == null) {
-            return;
-        }
-
-        List<TextChannel> allChannels = categories.stream()
-                .flatMap(c -> c.getTextChannels().stream())
-                .toList();
-
-        int channelsCount = allChannels.size();
-        int categoriesNeeded = Math.max(1, (channelsCount + 49) / 50);
-
-        List<Category> categoriesToKeep = categories.stream()
-                .limit(categoriesNeeded)
-                .toList();
-
-        int channelIndex = 0;
-        for (Category targetCategory : categoriesToKeep) {
-            int channelsForThisCategory = Math.min(50, allChannels.size() - channelIndex);
-
-            for (int i = 0; i < channelsForThisCategory; i++) {
-                TextChannel channel = allChannels.get(channelIndex++);
-                if (!channel.getParentCategory().equals(targetCategory)) {
-                    channel.getManager().setParent(targetCategory).queue();
-                }
-            }
-        }
-
-        categoriesToKeep.forEach(c -> {
-                    if (!c.getChannels().isEmpty() && ticketCategory != null) {
-                        c.modifyTextChannelPositions()
-                                .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
-                                .queue();
-                    }
-                }
-        );
-
-        List<Category> categoriesToDelete = categories.stream()
-                .skip(categoriesNeeded)
-                .filter(c -> !c.equals(mainCategory))
-                .toList();
-
-        for (Category category : categoriesToDelete) {
-            if (ticketCategory != null) {
-                Main.OVERFLOW_CHANNEL_CATEGORIES.get(ticketCategory).remove(category);
-            } else {
-                Main.OVERFLOW_UNCLAIMED_CHANNEL_CATEGORIES.remove(category);
-            }
-
-            jdbi.useHandle(handle ->
-                    handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                            .bind(0, category.getId())
-                            .execute()
-            );
-
-            category.delete().queue();
-        }
-    }
-
-    /**
-     * Consolidates pending rating categories, similar to consolidateChannels but for pending rating.
-     */
-    private void consolidatePendingRatingChannels(List<Category> categories, Category mainCategory) {
-        if (mainCategory == null) {
-            return;
-        }
-
-        List<TextChannel> allChannels = categories.stream()
-                .flatMap(c -> c.getTextChannels().stream())
-                .toList();
-
-        int channelsCount = allChannels.size();
-        int categoriesNeeded = Math.max(1, (channelsCount + 49) / 50);
-
-        List<Category> categoriesToKeep = categories.stream()
-                .limit(categoriesNeeded)
-                .toList();
-
-        int channelIndex = 0;
-        for (Category targetCategory : categoriesToKeep) {
-            int channelsForThisCategory = Math.min(50, allChannels.size() - channelIndex);
-
-            for (int i = 0; i < channelsForThisCategory; i++) {
-                TextChannel channel = allChannels.get(channelIndex++);
-                if (!channel.getParentCategory().equals(targetCategory)) {
-                    channel.getManager().setParent(targetCategory).queue();
-                }
-            }
-        }
-
-        List<Category> categoriesToDelete = categories.stream()
-                .skip(categoriesNeeded)
-                .filter(c -> !c.equals(mainCategory))
-                .toList();
-
-        for (Category category : categoriesToDelete) {
-            Main.OVERFLOW_PENDING_RATING_CATEGORIES.remove(category);
-
-            jdbi.useHandle(handle ->
-                    handle.createUpdate("DELETE FROM overflow_categories WHERE categoryID = ?")
-                            .bind(0, category.getId())
-                            .execute()
-            );
-
-            category.delete().queue();
-        }
-    }
-
     public void transfer(Ticket ticket, User supporter) {
         ticket.setSupporter(supporter);
         try {
@@ -875,31 +605,16 @@ public class TicketService {
             }
         }
         Category oldCategory = ticket.getTextChannel().getParentCategory();
-        Category newCategory = getOrCreateSupporterCategory(ticket.getTextChannel().getGuild(), supporter);
+        Category newCategory = getOrCreateChannelCategory(String.valueOf(supporter.getIdLong()), supporter.getName());
 
         ticket.getTextChannel().getManager().setParent(newCategory).delay(500, TimeUnit.MILLISECONDS).queue(
                 success -> {
                     newCategory.modifyTextChannelPositions()
                             .sortOrder(Comparator.comparingLong(ISnowflake::getIdLong))
                             .queue();
-                    if (oldCategory != null && oldCategory.getChannels().isEmpty()) {
-                        Long supporterId = getSupporterFromCategory(oldCategory);
-                        if (supporterId != null) {
-                            Main.SUPPORTER_CATEGORIES.get(supporterId).remove(oldCategory);
-                            ticketData.deleteSupporterCategory(oldCategory.getId());
-                            oldCategory.delete().queue();
-                        }
-                    }
+                    fillUpOrDeleteCategoryIfPossible(oldCategory);
                 },
                 error -> log.error("Couldn't move ticket channel to supporter category!", error)
         );
-    }
-
-    public Long getSupporterFromCategory(Category category) {
-        return Main.SUPPORTER_CATEGORIES.entrySet().stream()
-                .filter(e -> e.getValue().contains(category))
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
     }
 }

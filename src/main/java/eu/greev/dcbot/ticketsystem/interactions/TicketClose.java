@@ -178,22 +178,9 @@ public class TicketClose implements Interaction {
 
         Category parentCategory = ticket.getTextChannel().getParentCategory();
 
-        if (parentCategory != null && parentCategory.getChannels().size() == 1) {
-            Long supporterId = ticketService.getSupporterFromCategory(parentCategory);
-            if (supporterId != null) {
-                Main.SUPPORTER_CATEGORIES.get(supporterId).remove(parentCategory);
-                ticketData.deleteSupporterCategory(parentCategory.getId());
-                parentCategory.delete().queue();
-            }
-        }
-
-        // Move ticket to pending rating category
-        Category pendingCategory = ticketService.getAvailablePendingRatingCategory();
-        if (pendingCategory != null) {
-            ticket.getTextChannel().getManager()
-                    .setParent(pendingCategory)
-                    .queue();
-        }
+        ticket.getTextChannel().getManager()
+                .setParent(ticketService.getOrCreateChannelCategory(Main.PENDING_RATING_KEY, null))
+                .queue(success -> ticketService.fillUpOrDeleteCategoryIfPossible(parentCategory));
 
         // Remove supporter from ticket (can't see it anymore)
         ticket.getTextChannel()

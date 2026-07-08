@@ -37,9 +37,6 @@ public class DailyScheduler {
     }
 
     private void run() {
-        log.info("Running daily category consolidation...");
-        ticketService.consolidateCategoriesAndCleanup();
-
         if (config.getLogChannel() != 0) {
             EmbedBuilder embedBuilder = new EmbedBuilder()
                     .setTitle("Tickets waiting for supporter response")
